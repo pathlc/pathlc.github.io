@@ -1,0 +1,33 @@
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #fff;
+  color: #111;
+  line-height: 1.5;
+  padding: 2rem;
+}
+
+header, footer {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.card {
+  display: block;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.card:hover {
+  border-color: #1c7ed6;
+}
