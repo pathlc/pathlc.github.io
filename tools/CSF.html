@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kalkulator CSF – komórkowość i różnicowanie</title>
+  <style>
+    :root{ --bg:#f7f9fb; --card:#ffffff; --muted:#4b5563; --text:#111827; --accent:#2563eb; --ok:#059669; --warn:#b45309; }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif}
+    .wrap{max-width:1100px;margin:24px auto;padding:16px}
+    h1{font-size:clamp(20px,3.6vw,28px);margin:0 0 12px 0}
+    p.sub{margin:0 0 16px 0;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .card{background:var(--card);border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+    .card h2{font-size:16px;margin:0 0 8px 0;color:#1e3a8a}
+    .pad{padding:16px}
+    label{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin:8px 0}
+    label span{color:var(--muted)}
+    input[type=number], select{width:170px;background:#f9fafb;border:1px solid #cbd5e1;color:var(--text);border-radius:8px;padding:8px 10px;font-size:15px;outline:none}
+    input[type=number]:focus, select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.25)}
+    small.hint{display:block;color:var(--muted);margin-top:6px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .kpi{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .kpi .item{background:#f1f5f9;border:1px solid #e5e7eb;border-radius:12px;padding:12px}
+    .kpi .item .val{font-size:20px;font-weight:700;color:#1e3a8a}
+    .kpi .item .lbl{color:#6b7280;font-size:13px}
+    .warnBox{margin-top:10px;padding:10px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;color:#92400e;font-size:14px;display:none}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right}
+    th:nth-child(1),td:nth-child(1){text-align:left}
+    tfoot td{font-weight:700}
+    .muted{color:#6b7280}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid #d1d5db;font-size:12px;color:#374151;background:#f9fafb}
+    .btn{appearance:none;border:1px solid #cbd5e1;background:#f1f5f9;color:var(--text);padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+    .btn:hover{background:#e0e7ff}
+    .btn.copy{background:#2563eb;color:#fff;border:none}
+    .footer{color:#6b7280;font-size:13px;margin-top:10px}
+    textarea{width:100%;min-height:220px;background:#f9fafb;color:#111827;border:1px solid #cbd5e1;border-radius:8px;padding:12px;font:14px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
+    .controls{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
+    .controls .col{grid-column:span 6}
+    .tests{background:#f9fafb;border:1px dashed #cbd5e1;border-radius:8px;padding:12px;color:#111827}
+    .tests button{margin-right:8px}
+    @media (max-width:900px){.kpi{grid-template-columns:1fr}.controls .col{grid-column:span 12}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Kalkulator CSF – komórkowość i różnicowanie</h1>
+    <p class="sub">Założenia domyślne: liczysz w polu <b>0,34&nbsp;mm²</b>. Cały preparat ma <b>31&nbsp;mm²</b> i pochodzi z <b>250&nbsp;µL</b> materiału. Wyniki przeliczane są na <b>1&nbsp;µL</b>.</p>
+
+    <div class="grid">
+      <section class="card pad" style="grid-column: span 5;">
+        <h2>1) Zliczenia w polu reprezentatywnym (0,34&nbsp;mm²)</h2>
+        <label><span>Makrofagi</span><input class="cell-input" id="mac" type="number" inputmode="numeric" min="0" step="1" value="0"/></label>
+        <label><span>Limfocyty</span><input class="cell-input" id="lim" type="number" inputmode="numeric" min="0" step="1" value="0"/></label>
+        <label><span>Neutrofile</span><input class="cell-input" id="neu" type="number" inputmode="numeric" min="0" step="1" value="0"/></label>
+        <label><span>Eozynofile</span><input class="cell-input" id="eos" type="number" inputmode="numeric" min="0" step="1" value="0"/></label>
+        <small class="hint">Enter przechodzi do kolejnego pola. Użyj Tab/Shift+Tab dla szybkiej nawigacji.</small>
+      </section>
+
+      <section class="card pad" style="grid-column: span 7;">
+        <h2>2) Parametry przeliczeń</h2>
+        <div class="row">
+          <label style="flex:1"><span>Pole pomiarowe [mm²]</span><input id="areaField" type="number" min="0" step="0,01" value="0.34" /></label>
+          <label style="flex:1"><span>Powierzchnia preparatu [mm²]</span><input id="areaTotal" type="number" min="0" step="1" value="31" /></label>
+        </div>
+        <div class="row">
+          <label style="flex:1"><span>Objętość źródłowa [mL]</span><input id="volSource" type="number" min="0" step="1" value="1" /></label>
+          <label style="flex:1"><span>Docelowa objętość [µL]</span><input id="volTarget" type="number" min="0" step="1" value="1" /></label>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <label style="flex:1"><span>Objętość CSF (µL)</span><input id="volBAL" type="number" min="0" step="10" value="250" placeholder="" /></label>
+          <label style="flex:1"><span>Rozcieńczenie osadu (mL)</span><input id="volResusp" type="number" min="0" step="5" value="1" /></label>
+        </div>
+      </section>
+
+      <section class="card pad" style="grid-column: span 12;">
+        <h2>Wyniki liczbowe</h2>
+        <div class="kpi" style="margin-bottom:10px">
+          <div class="item">
+            <div class="val" id="sumField">0</div>
+            <div class="lbl">Suma komórek w polu</div>
+          </div>
+          <div class="item">
+            <div class="val" id="factor">—</div>
+            <div class="lbl">Współczynnik do 1&nbsp;mL</div>
+          </div>
+          <div class="item">
+            <div class="val" id="cellsPerMl">0</div>
+            <div class="lbl">Komórkowość łącznie [kom./µL]</div>
+          </div>
+        </div>
+        <!-- <div class="warnBox" id="warnLowCells">⚠️ Uwaga: mała liczba komórek w polu (&lt;200) — wynik może być niereprezentatywny.</div> -->
+
+        <table aria-label="Tabela wyników różnicowania" style="margin-top:12px">
+          <thead>
+            <tr>
+              <th>Populacja</th>
+              <th>Zliczenie</th>
+              <th>%</th>
+              <th>kom./mL</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Makrofagi</td><td id="macN">0</td><td id="macPct">0</td><td id="macMl">0</td></tr>
+            <tr><td>Limfocyty</td><td id="limN">0</td><td id="limPct">0</td><td id="limMl">0</td></tr>
+            <tr><td>Neutrofile</td><td id="neuN">0</td><td id="neuPct">0</td><td id="neuMl">0</td></tr>
+            <tr><td>Eozynofile</td><td id="eosN">0</td><td id="eosPct">0</td><td id="eosMl">0</td></tr>
+          </tbody>
+          <tfoot>
+            <tr><td>Razem</td><td id="sumN">0</td><td id="sumPct">100</td><td id="sumMl">0</td></tr>
+          </tfoot>
+        </table>
+
+        <div class="row" style="margin-top:12px">
+          <span class="pill" id="assumption">Założenia: 1&nbsp;mm² → <span id="areaInfo">31</span>&nbsp;mm²; 80&nbsp;µL → 1&nbsp;mL</span>
+          <button class="btn" id="btnReset" type="button">Wyczyść</button>
+        </div>
+        <div class="footer" id="footNote">Współczynnik = (pow. preparatu / pow. pola) × (docelowa objętość [µL] / objętość źródłowa [µL]) = 31 × 12,5 = 387,5.</div>
+      </section>
+
+      <section class="card pad" style="grid-column: span 12;">
+        <h2>3) Ustawienia raportu i podgląd</h2>
+        <div class="controls">
+          <div class="col">
+            <label><span>Określenie „…komórkowy”</span>
+              <select id="cellularityQual">
+                <option value="umiarkowanie">umiarkowanie </option>
+                <option value="skąpo">skąpo </option>
+                <option value="obficie">obficie </option>
+              </select>
+            </label>
+            <label style="grid-template-columns:auto 1fr;gap:10px"><input type="checkbox" id="autoQual" checked/> <span>Automatyczna kwalifikacja wg progów</span></label>
+            <label><span>Zaokrąglenie</span>
+              <select id="kDigits">
+                <option value="0">do całkowitych</option>
+                <option value="1">1 miejsce po przecinku</option>
+              </select>
+            </label>
+          </div>
+          <div class="col">
+            <label style="grid-template-columns:auto 1fr;gap:10px"><input type="checkbox" id="addIronNote"/> <span>Makrofagi: dodać „(w części brunatne złogi…; barwienie na żelazo ujemne)”</span></label>
+            <label style="grid-template-columns:auto 1fr;gap:10px"><input type="checkbox" id="addBronchialEpith" checked/> <span>Dodać: „Ponadto[ nieliczne] erytrocyty.”</span></label>
+          </div>
+        </div>
+        <div style="margin-top:10px">
+          <textarea id="reportOut" spellcheck="false"></textarea>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn copy" id="btnCopyReport" type="button">Kopiuj raport</button>
+        </div>
+      </section>
+
+      <section class="card pad" style="grid-column: span 12;">
+        <h2>4) Testy (dev)</h2>
+        <div class="tests">
+          <p class="muted">Szybka weryfikacja poprawności obliczeń i formatu raportu.</p>
+          <div class="row">
+            <button class="btn" id="btnRunTests" type="button">Uruchom testy</button>
+            <button class="btn" id="btnResetAfterTests" type="button">Wyczyść po testach</button>
+          </div>
+          <ul id="testResults"></ul>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id)=>document.getElementById(id);
+    const ids = ["mac","lim","neu","eos","areaField","areaTotal","volSource","volTarget","volBAL","volResusp","cellularityQual","kDigits","addIronNote","addBronchialEpith","autoQual"];
+
+    function valNum(id){ const el=$(id); const v=el?el.valueAsNumber:NaN; return Number.isFinite(v)?v:0; }
+    function fmtInt(n){ if(!Number.isFinite(n)) return "—"; return Math.round(n).toLocaleString('pl-PL'); }
+    function fmtPct(n){ if(!Number.isFinite(n)) return "0,0"; return (Math.round(n*10)/10).toLocaleString('pl-PL', {minimumFractionDigits:1, maximumFractionDigits:1}); }
+    function fmtFactor(n){ if(!Number.isFinite(n)) return "—"; return (Math.round(n*1000)/1000).toLocaleString('pl-PL'); }
+    function fmtFixed(n, d){ if(!Number.isFinite(n)) return "—"; const p=Math.pow(10,d); const r=Math.round(n*p)/p; return r.toLocaleString('pl-PL',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+    function qualFromKVal(k){ if(k<20) return 'skąpo'; if(k>=100) return 'obficie'; return 'umiarkowanie'; }
+
+    function compute(){
+      const mac=Math.max(0,valNum('mac')), lim=Math.max(0,valNum('lim')), neu=Math.max(0,valNum('neu')), eos=Math.max(0,valNum('eos'));
+      const sum=mac+lim+neu+eos;
+
+      const aField=Math.max(0.0001,valNum('areaField')); const aTotal=Math.max(0.0001,valNum('areaTotal'));
+      const vSrc=Math.max(0.0001,valNum('volSource')); const vTgt_mL=Math.max(0.000001,valNum('volTarget')); const vTgt_uL=vTgt_mL*1000;
+      const areaFactor=aTotal/aField, volFactor=vTgt_uL/vSrc, factor=areaFactor*volFactor;
+
+      $("sumField").textContent=sum.toLocaleString('pl-PL');
+      $("factor").textContent=fmtFactor(factor);
+
+      // Korekta × (B/A) — włączona domyślnie, jeśli A podano
+      const A = Math.max(0.0001, valNum('volBAL'));
+      const B = Math.max(0.0001, valNum('volResusp'));
+      let correction = 1; if (A > 0) correction = B / A;
+
+      const rows=[{n:mac,nId:'macN',pctId:'macPct',mlId:'macMl'},{n:lim,nId:'limN',pctId:'limPct',mlId:'limMl'},{n:neu,nId:'neuN',pctId:'neuPct',mlId:'neuMl'},{n:eos,nId:'eosN',pctId:'eosPct',mlId:'eosMl'}];
+      for(const r of rows){ const pct=sum>0?(r.n/sum*100):0; const perMl=r.n*factor*correction; $(r.nId).textContent=r.n.toLocaleString('pl-PL'); $(r.pctId).textContent=fmtPct(pct); $(r.mlId).textContent=fmtInt(perMl); }
+
+      $("sumN").textContent=sum.toLocaleString('pl-PL');
+      $("sumPct").textContent=sum>0?"100,0":"0,0";
+      const totalPerMl = sum*factor*correction/1000; $("sumMl").textContent=fmtInt(totalPerMl); $("cellsPerMl").textContent=fmtInt(totalPerMl);
+
+      $("areaInfo").textContent=(aTotal/aField).toLocaleString('pl-PL');
+      $("footNote").textContent=`Współczynnik = (${aTotal.toLocaleString('pl-PL')} / ${aField.toLocaleString('pl-PL')}) × (${vTgt_uL.toLocaleString('pl-PL')} / ${vSrc.toLocaleString('pl-PL')}) = ${fmtFactor(areaFactor)} × ${fmtFactor(volFactor)} = ${fmtFactor(factor)}.`;
+
+      // Ostrzeżenie o niereprezentatywności <200
+     // $("warnLowCells").style.display = sum < 200 ? 'block' : 'none';
+
+      // Auto/manual select enable state
+      const auto=$("autoQual").checked; $("cellularityQual").disabled=auto;
+
+      updateReport();
+    }
+
+    function genReportText(){
+      const addIron=$("addIronNote").checked; const addBronch=$("addBronchialEpith").checked; const kDigits=parseInt($("kDigits").value,10)||0; const auto=$("autoQual").checked;
+      const macPct=$("macPct").textContent, limPct=$("limPct").textContent, neuPct=$("neuPct").textContent, eosPct=$("eosPct").textContent;
+
+      const aField=Math.max(0.0001,valNum('areaField')); const aTotal=Math.max(0.0001,valNum('areaTotal')); const vSrc=Math.max(0.0001,valNum('volSource')); const vTgt_mL=Math.max(0.000001,valNum('volTarget')); const vTgt_uL=vTgt_mL*1000;
+      const areaFactor=aTotal/aField, volFactor=vTgt_uL/vSrc, factor=areaFactor*volFactor;
+      const A = Math.max(0.0001, valNum('volBAL'));
+      const B = Math.max(0.0001, valNum('volResusp'));
+      let correction = 1; if (A > 0) correction = B / A;
+      const sum=valNum('mac')+valNum('lim')+valNum('neu')+valNum('eos'); const totalPerMl=sum*factor*correction; const kVal=totalPerMl/1000; const kTxt=fmtFixed(kVal,kDigits);
+
+      const qualAuto=qualFromKVal(kVal); let qualWord=qualAuto; if(auto){ $("cellularityQual").value=qualAuto; } else { qualWord=$("cellularityQual").value.trim(); } $("cellularityQual").disabled=auto;
+
+      const ironTxt=addIron?" (w części brunatne złogi w cytoplazmie; barwienie histochemiczne w kierunku obecności żelaza ujemne)":"";
+      const bronchTxt=addBronch?"Ponadto[ nieliczne] erytrocyty.":"";
+
+      const header=`Materiał odpowiedni do oceny mikroskopowej, ${qualWord}komórkowy, zawiera przeciętnie ok. ${kTxt} komórek / µl, w tym:`;
+      const lines=[`- makrofagi: ${macPct}%${ironTxt}`,`- limfocyty: ${limPct}%`,`- neutrofile: ${neuPct}%`,`- eozynofile: ${eosPct}%`];
+      const tail=`Nie stwierdzono obecności komórek nowotworu złośliwego.`;
+      return [header,...lines,bronchTxt,tail].filter(Boolean).join('\n');
+    }
+
+    function updateReport(){ $("reportOut").value=genReportText(); }
+
+    async function copyReport(){
+      const btn=$("btnCopyReport"); const text=$("reportOut").value;
+      if(navigator.clipboard && window.isSecureContext){ try{ await navigator.clipboard.writeText(text); btn.textContent="Skopiowano ✓"; setTimeout(()=>btn.textContent="Kopiuj raport",1600); return true; }catch(e){} }
+      const ta=document.createElement('textarea'); ta.value=text; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.top='-10000px'; document.body.appendChild(ta); ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length); let ok=false; try{ ok=document.execCommand('copy'); }catch(e){ ok=false; } document.body.removeChild(ta); if(ok){ btn.textContent="Skopiowano ✓"; setTimeout(()=>btn.textContent="Kopiuj raport",1600); return true; }
+      try{ $("reportOut").focus(); $("reportOut").select(); }catch(_){}
+      alert("Kopiowanie zablokowane przez przeglądarkę. Zaznaczyłem tekst – wciśnij Ctrl+C."); return false;
+    }
+
+    function resetAll(){ ['mac','lim','neu','eos'].forEach(id=>$(id).value=0); $("areaField").value=1; $("areaTotal").value=31; $("volSource").value=80; $("volTarget").value=1; $("cellularityQual").value='umiarkowanie'; $("kDigits").value='0'; $("addIronNote").checked=false; $("addBronchialEpith").checked=true; $("autoQual").checked=true; compute(); }
+
+    document.addEventListener('keydown',(ev)=>{ if(ev.key==='Enter'){ const focusables=["mac","lim","neu","eos","areaField","areaTotal","volSource","volTarget"].map(id=>$(id)); const i=focusables.indexOf(document.activeElement); if(i>-1){ ev.preventDefault(); const n=focusables[i+1]||$("cellularityQual"); n.focus(); } } });
+
+    ids.forEach(id=>$(id).addEventListener('input', compute));
+    $("btnCopyReport").addEventListener('click', copyReport);
+    $("btnReset").addEventListener('click', resetAll);
+
+    // ---------- Testy ----------
+    function stripSpaces(s){ return (s+"").replace(/\s/g,''); }
+    function plToFloat(s){ s=stripSpaces(s).replace(',', '.'); return parseFloat(s); }
+    function textDigits(s){ return (s+"").replace(/[^0-9]/g,''); }
+
+    function snapshotState(){ return { mac:$("mac").value, lim:$("lim").value, neu:$("neu").value, eos:$("eos").value, areaField:$("areaField").value, areaTotal:$("areaTotal").value, volSource:$("volSource").value, volTarget:$("volTarget").value, volBAL:$("volBAL").value, volResusp:$("volResusp").value, cellularityQual:$("cellularityQual").value, kDigits:$("kDigits").value, addIronNote:$("addIronNote").checked, addBronchialEpith:$("addBronchialEpith").checked, autoQual:$("autoQual").checked, scrollY:window.scrollY, activeId:(document.activeElement&&document.activeElement.id)?document.activeElement.id:null }; }
+    function restoreState(s){ $("mac").value=s.mac; $("lim").value=s.lim; $("neu").value=s.neu; $("eos").value=s.eos; $("areaField").value=s.areaField; $("areaTotal").value=s.areaTotal; $("volSource").value=s.volSource; $("volTarget").value=s.volTarget; if('volBAL' in s) $("volBAL").value=s.volBAL; if('volResusp' in s) $("volResusp").value=s.volResusp; $("cellularityQual").value=s.cellularityQual; $("kDigits").value=s.kDigits; $("addIronNote").checked=s.addIronNote; $("addBronchialEpith").checked=s.addBronchialEpith; $("autoQual").checked=s.autoQual; compute(); try{ if(s.activeId) $(s.activeId).focus(); window.scrollTo(0, s.scrollY||0);}catch(e){} }
+    function runTests(){ const __saved=snapshotState(); try{ __runTestsCore(); } finally { restoreState(__saved); } }
+
+    function __runTestsCore(){
+      const out=$("testResults"); out.innerHTML=''; const results=[];
+      function it(name, fn){ try{ fn(); results.push({name, pass:true}); } catch(e){ results.push({name, pass:false, err:e.message}); } }
+      function expect(cond, msg){ if(!cond) throw new Error(msg||'Assertion failed'); }
+
+      // TEST 1 – proste 80/10/5/5, domyślne parametry
+      resetAll(); $("mac").value=80; $("lim").value=10; $("neu").value=5; $("eos").value=5; $("kDigits").value='1'; compute();
+      it('Suma = 100', ()=>{ expect($("sumField").textContent.trim()==='100', 'sumField!=100'); });
+      it('Współczynnik ≈ 387,5', ()=>{ expect(Math.abs(plToFloat($("factor").textContent)-387.5)<1e-9, 'factor!='+$("factor").textContent); });
+      it('Komórkowość łącznie = 38 750', ()=>{ expect(textDigits($("cellsPerMl").textContent)==='38750', 'cellsPerMl!='+$("cellsPerMl").textContent); });
+      it('Procenty 80,0 / 10,0 / 5,0 / 5,0', ()=>{ const a=$("macPct").textContent, b=$("limPct").textContent, c=$("neuPct").textContent, d=$("eosPct").textContent; expect(a==='80,0'&&b==='10,0'&&c==='5,0'&&d==='5,0', 'pct!= '+[a,b,c,d].join(',')); });
+      it('Raport zawiera „ok. 38,8 tys.”', ()=>{ const t=$("reportOut").value; expect(/ok\.\s*38,8\s*tys\./.test(t), 'report tys wrong: '+t); });
+
+      // TEST 2 – brak komórek → 0 oraz domyślnie włączone zdanie o nabłonkach
+      resetAll(); compute();
+      it('Suma=0 => % = 0,0', ()=>{ expect($("sumPct").textContent==='0,0', 'sumPct!='+$("sumPct").textContent); });
+      it('Domyślnie włączone zdanie o nabłonkach', ()=>{ const t=$("reportOut").value; expect(/Ponadto nieliczne nabłonki gruczołowe oskrzela\./.test(t), 'brak zdania o nabłonkach w raporcie'); });
+
+      // TEST 3 – klasyfikacja skąpo (<20 tys./mL)
+      resetAll(); $("mac").value=40; compute();
+      it('Klasyfikacja: skąpokomórkowy (<20 tys./mL)', ()=>{ const t=$("reportOut").value; expect(/skąpokomórkowy/.test(t), 'nie wykryto skąpokomórkowy'); expect($("cellularityQual").value==='skąpo','select!=skąpo'); });
+      
+      // TEST 4 – klasyfikacja umiarkowanie (20-<100 tys./mL)
+      resetAll(); $("mac").value=60; compute();
+      it('Klasyfikacja: umiarkowaniekomórkowy (20–<100 tys./mL)', ()=>{ const t=$("reportOut").value; expect(/umiarkowaniekomórkowy/.test(t), 'nie wykryto umiarkowaniekomórkowy'); expect($("cellularityQual").value==='umiarkowanie','select!=umiarkowanie'); });
+      
+      // TEST 5 – klasyfikacja obficie (>=100 tys./mL)
+      resetAll(); $("mac").value=300; compute();
+      it('Klasyfikacja: obficiekomórkowy (>=100 tys./mL)', ()=>{ const t=$("reportOut").value; expect(/obficiekomórkowy/.test(t), 'nie wykryto obficiekomórkowy'); expect($("cellularityQual").value==='obficie','select!=obficie'); });
+
+      // TEST 6 – granica 100 tys./mL kwalifikuje do obficie
+      // kVal = sum*0.3875, więc sum=259 => ~100.36 tys./mL
+      resetAll(); $("mac").value=259; compute();
+      it('Granica 100k -> obficie', ()=>{ const t=$("reportOut").value; expect(/obficiekomórkowy/.test(t), '100k nie sklasyfikowano jako obficie'); expect($("cellularityQual").value==='obficie','select!=obficie na granicy'); });
+
+      // TEST 7 – manual override działa
+      resetAll(); $("mac").value=300; compute(); $("autoQual").checked=false; $("cellularityQual").value='skąpo'; compute();
+      it('Manual override: skąpokomórkowy mimo wysokiej k.', ()=>{ const t=$("reportOut").value; expect(/skąpokomórkowy/.test(t), 'override nie zadziałał'); expect($("cellularityQual").value==='skąpo','select!=skąpo po override'); });
+
+      // TEST 8 – ostrzeżenie <200 widoczne
+      resetAll(); $("mac").value=100; $("lim").value=50; $("neu").value=30; $("eos").value=10; compute(); // suma=190
+      // it('Warn <200: widoczny', ()=>{ const st=getComputedStyle($("warnLowCells")).display; expect(st==='block', 'warn nieaktywny dla <200'); });
+      // i znika gdy >=200
+      $("mac").value=200; $("lim").value=0; $("neu").value=0; $("eos").value=0; compute();
+     // it('Warn >=200: ukryty', ()=>{ const st=getComputedStyle($("warnLowCells")).display; expect(st==='none', 'warn nie zniknął dla >=200'); });
+
+      results.forEach(r=>{ const li=document.createElement('li'); li.textContent=(r.pass?'✅ ':'❌ ')+r.name+(r.pass?'':(' — '+r.err)); out.appendChild(li); });
+    }
+
+    $("btnRunTests").addEventListener('click', runTests);
+    $("btnResetAfterTests").addEventListener('click', resetAll);
+
+    // Init
+    $("addBronchialEpith").checked=true; $("autoQual").checked=true; compute();
+  </script>
+</body>
+</html>
