@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kalkulator RCB (Residual Cancer Burden) – PL</title>
+  <style>
+    :root{--bg:#f8fafc;--card:#ffffff;--ink:#1f2937;--muted:#6b7280;--accent:#2563eb;--err:#ef4444;}
+    html,body{min-height:100%}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Inter,Arial,sans-serif;
+      background:linear-gradient(180deg,#f8fafc,#eef2f7);
+      background-attachment:fixed;
+      min-height:100vh;
+      color:var(--ink);
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      padding:24px;
+    }
+    .wrap{width:min(920px,100%)}
+    .card{background:var(--card);border:1px solid #e5e7eb;box-shadow:0 6px 28px rgba(0,0,0,.06);border-radius:18px;overflow:hidden}
+    header{padding:18px 22px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:14px}
+    header h1{font-size:1.15rem;margin:0;font-weight:700;letter-spacing:.2px}
+    .content{padding:22px}
+
+    .secTitle{margin:0 0 10px 0;font-size:1rem;font-weight:800;letter-spacing:.2px}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:760px){.split{grid-template-columns:1fr}}
+
+    .block{padding:12px;border-radius:12px;background:#f9fafb;border:1px solid #e5e7eb;box-shadow:inset 0 1px 0 rgba(0,0,0,.02)}
+    .grid{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center}
+    .grid .head{color:var(--muted);font-size:.9rem}
+    label{font-weight:600}
+    .row{padding:10px 12px;border-radius:12px;background:#ffffff;border:1px solid #e5e7eb;box-shadow:inset 0 1px 0 rgba(0,0,0,.02)}
+
+    input[type="number"]{width:140px;max-width:100%;padding:10px 12px;border-radius:10px;border:1px solid #d1d5db;background:#ffffff;color:var(--ink);font-size:1rem}
+    input[type="number"]:focus{outline:2px solid var(--accent);border-color:#93c5fd;box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+    input[type="number"][disabled]{background:#f3f4f6;color:#9ca3af}
+
+    .unit{display:flex;align-items:center;gap:6px;color:var(--muted)}
+    .hint{color:var(--muted);font-size:.9rem;margin-top:8px;line-height:1.35}
+
+    .tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+    .pill{display:inline-flex;gap:8px;align-items:center;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;padding:8px 12px;font-weight:600}
+    .pill.err{border-color:#ef444466;color:#991b1b}
+    .pill.ok{border-color:#16a34a66;color:#166534;background:#ecfdf5}
+
+    .result{margin-top:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .score{font-size:1.9rem;font-weight:800;letter-spacing:.5px}
+    .bar{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden;flex:1;min-width:200px}
+    .bar>span{display:block;height:100%;background:linear-gradient(90deg,#7aa2ff,#7affd1);width:0%}
+
+    .btn{cursor:pointer;border:none;border-radius:12px;padding:10px 14px;font-weight:700;background:#ffffff;color:var(--ink);border:1px solid #d1d5db}
+    .btn:hover{background:#f3f4f6}
+    .btn.primary{background:var(--accent);border-color:var(--accent);color:white}
+    .btn.primary:hover{filter:brightness(.96)}
+
+    .errBox{display:none;margin-top:12px}
+
+    /* Techniczne */
+    details.tech{margin-top:18px}
+    details.tech>summary{list-style:none;cursor:pointer;user-select:none;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#ffffff;border:1px solid #e5e7eb;font-weight:800}
+    details.tech>summary::-webkit-details-marker{display:none}
+    details.tech>summary::after{content:'▾';margin-left:auto;color:var(--muted)}
+    details.tech[open]>summary::after{content:'▴'}
+
+    .kpi{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:760px){.kpi{grid-template-columns:1fr}}
+    .kpi .k{padding:10px 12px;border-radius:12px;background:#f9fafb;border:1px solid #e5e7eb}
+    .kpi .t{color:var(--muted);font-size:.9rem}
+    .kpi .v{margin-top:6px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+
+    .formula{margin-top:10px;padding:12px 14px;border-radius:12px;background:#f9fafb;border:1px solid #e5e7eb;font-size:.98rem}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+
+    .footer{padding:14px 22px;border-top:1px solid #e5e7eb;color:var(--muted);font-size:.9rem}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <header>
+        <h1>Kalkulator RCB (Residual Cancer Burden)</h1>
+      </header>
+
+      <div class="content">
+        <div class="split">
+          <div class="block">
+            <div class="secTitle">Łożysko guza pierwotnego</div>
+            <div class="grid">
+              <div class="head">Parametr</div>
+              <div class="head">Wartość</div>
+              <div class="head">Jednostka</div>
+
+              <div class="row"><label>Wymiary łożyska guza</label></div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input id="d1" type="number" step="0.1" inputmode="decimal" placeholder="" style="width:90px" />
+                ×
+                <input id="d2" type="number" step="0.1" inputmode="decimal" placeholder="" style="width:90px" />
+              </div>
+              <div class="unit">mm</div>
+
+              <div class="row"><label for="cell">% łożyska z rakiem</label></div>
+              <div><input id="cell" type="number" step="1" inputmode="numeric" placeholder="" /></div>
+              <div class="unit">%</div>
+
+              <div class="row"><label for="insitu">% raka in situ (z całego raka)</label></div>
+              <div><input id="insitu" type="number" step="1" inputmode="numeric" placeholder="" /></div>
+              <div class="unit">%</div>
+            </div>
+            <div class="hint">
+              <span class="mono">% łożyska z rakiem</span> = udział pola łożyska guza zajęty przez raka (inwazyjny + in situ).<br>
+              <span class="mono">% in situ</span> „odejmuje” część nieinwazyjną z tej puli.
+            </div>
+          </div>
+
+          <div class="block">
+            <div class="secTitle">Węzły chłonne</div>
+            <div class="grid">
+              <div class="head">Parametr</div>
+              <div class="head">Wartość</div>
+              <div class="head">Jednostka</div>
+
+              <div class="row"><label for="ln">Liczba dodatnich węzłów</label></div>
+              <div><input id="ln" type="number" step="1" inputmode="numeric" value="0" /></div>
+              <div class="unit">szt.</div>
+
+              <div class="row"><label for="dmet">Średnica największego przerzutu</label></div>
+              <div><input id="dmet" type="number" step="0.1" inputmode="decimal" placeholder="" /></div>
+              <div class="unit">mm</div>
+            </div>
+            <div class="hint">
+              Jeśli <span class="mono">LN = 0</span>, składowa węzłowa = 0.
+            </div>
+          </div>
+        </div>
+
+        <div class="tools">
+          <button class="btn primary" id="calcBtn">Oblicz</button>
+          <button class="btn" id="clearBtn" type="button">Wyczyść</button>
+          <button class="btn" id="copyBtn" type="button">Kopiuj wynik</button>
+          <span class="pill" id="classPill">RCB: —</span>
+        </div>
+
+        <div class="errBox pill" id="errBox"><span id="errMsg"></span></div>
+
+        <div class="result">
+          <div class="score" id="rcbOut">RCB: —</div>
+          <div class="bar" title="Wizualizacja (0–5)"><span id="barFill"></span></div>
+        </div>
+
+        <div class="block" style="margin-top:12px">
+          <div class="secTitle" style="font-size:.95rem">Wynik do skopiowania</div>
+          <textarea class="mono" id="textOut" readonly style="width:100%;min-height:44px;resize:vertical;padding:10px 12px;border-radius:12px;border:1px solid #e5e7eb;background:#ffffff;box-sizing:border-box">Residual Cancer Burden (RCB): —</textarea>
+          <div class="hint" style="margin-top:8px">To pole jest tylko do odczytu — możesz też zaznaczyć i skopiować ręcznie.</div>
+        </div>
+
+        <details class="tech">
+          <summary>Techniczne: szczegóły obliczeń, wzór i objaśnienia</summary>
+
+          <div class="kpi">
+            <div class="k">
+              <div class="t">d<sub>prim</sub> = √(d1·d2)</div>
+              <div class="v" id="dprimOut">—</div>
+            </div>
+            <div class="k">
+              <div class="t">f<sub>inv</sub> = (cell/100)·(1 − in situ/100)</div>
+              <div class="v" id="finvOut">—</div>
+            </div>
+            <div class="k">
+              <div class="t">Składowa guza</div>
+              <div class="v" id="ptOut">—</div>
+            </div>
+            <div class="k">
+              <div class="t">Składowa węzłów</div>
+              <div class="v" id="ndOut">—</div>
+            </div>
+          </div>
+
+          <div class="formula">
+            <div><b>Klasy RCB:</b> RCB-0 = 0 (pCR), RCB-I ≤ 1.36, RCB-II 1.37–3.28, RCB-III &gt; 3.28.</div>
+            <div style="margin-top:8px"><b>Wzór (implementacja):</b></div>
+            <div class="mono" style="margin-top:6px;line-height:1.45">
+              d<sub>prim</sub> = √(d1 · d2)<br>
+              f<sub>inv</sub> = (cell/100) · (1 − in&nbsp;situ/100)<br>
+              Składowa guza = 1.4 · (f<sub>inv</sub> · d<sub>prim</sub>)<sup>0.17</sup><br>
+              Składowa węzłów = [4 · (1 − 0.75<sup>LN</sup>) · d<sub>met</sub>]<sup>0.17</sup><br>
+              RCB = Składowa guza + Składowa węzłów = 1.4 · (f<sub>inv</sub> · d<sub>prim</sub>)<sup>0.17</sup> + [4 · (1 − 0.75<sup>LN</sup>) · d<sub>met</sub>]<sup>0.17</sup>
+            </div>
+
+            <div style="margin-top:10px"><b>Objaśnienia zmiennych:</b></div>
+            <div class="mono" style="margin-top:6px;line-height:1.45">
+              d<sub>prim</sub> – geometryczna średnia dwóch największych wymiarów łożyska guza (mm)<br>
+              f<sub>inv</sub> – frakcja łożyska guza zajęta przez raka inwazyjnego<br>
+              d1, d2 – największe wymiary łożyska guza w badaniu makroskopowym (mm)<br>
+              cell – % łożyska z rakiem (rak inwazyjny + in situ)<br>
+              in&nbsp;situ – % składowej nieinwazyjnej w obrębie całego raka<br>
+              LN – liczba dodatnich węzłów chłonnych<br>
+              d<sub>met</sub> – średnica największego przerzutu w węźle chłonnym (mm)
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div class="footer">Na podstawie kalkulatora RCB MD Anderson Cancer Center oraz publikacji: W. Fraser Symmans et&nbsp;al. <i>Measurement of Residual Breast Cancer Burden to Predict Survival After Neoadjuvant Chemotherapy</i>. J Clin Oncol 25:4414–4422 (2007). DOI: 10.1200/JCO.2007.10.6823</div>
+    </div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  function parseNum(x){
+    const s = String(x ?? '').trim().replace(/\s+/g,'').replace(',', '.');
+    return s === '' ? NaN : Number(s);
+  }
+
+  function showMsg(msg, kind='err'){
+    const errMsg = $('errMsg');
+    const errBox = $('errBox');
+    if (!errMsg || !errBox) return;
+
+    errMsg.textContent = msg;
+    errBox.style.display = msg ? 'inline-flex' : 'none';
+
+    errBox.classList.remove('err','ok');
+    if (kind === 'ok') errBox.classList.add('ok');
+    else errBox.classList.add('err');
+  }
+
+  // kompatybilność: stare wywołania
+  function showErr(msg){ showMsg(msg, 'err'); }
+
+  function fmt(n, digits){
+    return Number.isFinite(n) ? n.toFixed(digits) : '—';
+  }
+
+  function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+
+  function classify(rcb){
+    if (!Number.isFinite(rcb)) return '—';
+    if (rcb === 0) return 'RCB-0 (pCR)';
+    if (rcb <= 1.36) return 'RCB-I';
+    if (rcb <= 3.28) return 'RCB-II';
+    return 'RCB-III';
+  }
+
+  function calc(){
+    showMsg('', 'err');
+
+    const d1 = parseNum($('d1')?.value);
+    const d2 = parseNum($('d2')?.value);
+    const cell = parseNum($('cell')?.value);
+    const insitu = parseNum($('insitu')?.value);
+    const lnRaw = parseNum($('ln')?.value);
+    let dmet = parseNum($('dmet')?.value);
+
+    const problems = [];
+    if (!(d1 > 0)) problems.push('Wymiar 1 musi być > 0.');
+    if (!(d2 > 0)) problems.push('Wymiar 2 musi być > 0.');
+    if (!(cell >= 0 && cell <= 100)) problems.push('% łożyska z rakiem: 0–100%.');
+    if (!(insitu >= 0 && insitu <= 100)) problems.push('% in situ: 0–100%.');
+    if (!(Number.isFinite(lnRaw) && lnRaw >= 0 && Number.isInteger(lnRaw))) problems.push('Liczba węzłów: liczba całkowita ≥ 0.');
+
+    // dmet wymagane tylko przy LN>0
+    if (Number.isFinite(lnRaw) && lnRaw === 0 && !Number.isFinite(dmet)) dmet = 0;
+    if (Number.isFinite(lnRaw) && lnRaw > 0 && !(Number.isFinite(dmet) && dmet >= 0)) problems.push('Średnica największego przerzutu: podaj wartość ≥ 0 mm (wymagane przy LN > 0).');
+
+    if (problems.length){
+      showErr(problems.join(' '));
+      return null;
+    }
+
+    const LN = lnRaw;
+
+    const dprim = Math.sqrt(d1 * d2);
+    const finv = clamp01(cell/100) * (1 - clamp01(insitu/100));
+
+    // Składowa guza
+    const pt = 1.4 * Math.pow(finv * dprim, 0.17);
+
+    // Składowa węzłów
+    const nodeBase = 4 * (1 - Math.pow(0.75, LN)) * dmet;
+    const nd = (LN === 0 || dmet === 0) ? 0 : Math.pow(nodeBase, 0.17);
+
+    const rcb = pt + nd;
+    return { dprim, finv, pt, nd, rcb, cls: classify(rcb) };
+  }
+
+  function render(res){
+    const rcbOut = $('rcbOut');
+    const classPill = $('classPill');
+    const barFill = $('barFill');
+    const dprimOut = $('dprimOut');
+    const finvOut = $('finvOut');
+    const ptOut = $('ptOut');
+    const ndOut = $('ndOut');
+    const textOut = $('textOut');
+
+    // jeśli czegoś brakuje w DOM, nie wywalaj całego UI
+    if (!rcbOut || !classPill || !barFill || !textOut) return;
+
+    if (!res){
+      rcbOut.textContent = 'RCB: —';
+      classPill.textContent = 'RCB: —';
+      barFill.style.width = '0%';
+      if (dprimOut) dprimOut.textContent = '—';
+      if (finvOut) finvOut.textContent = '—';
+      if (ptOut) ptOut.textContent = '—';
+      if (ndOut) ndOut.textContent = '—';
+      textOut.value = 'Residual Cancer Burden (RCB): —';
+      return;
+    }
+
+    const rcbVal = fmt(res.rcb, 3);
+    rcbOut.textContent = 'RCB: ' + rcbVal;
+    classPill.textContent = 'RCB: ' + res.cls;
+
+    const pct = Math.max(0, Math.min(1, res.rcb / 5)) * 100;
+    barFill.style.width = pct.toFixed(1) + '%';
+
+    if (dprimOut) dprimOut.textContent = fmt(res.dprim, 2) + ' mm';
+    if (finvOut) finvOut.textContent = fmt(res.finv, 4);
+    if (ptOut) ptOut.textContent = fmt(res.pt, 4);
+    if (ndOut) ndOut.textContent = fmt(res.nd, 4);
+
+    textOut.value = `Residual Cancer Burden (RCB): ${rcbVal}. ${res.cls}`;
+  }
+
+  function syncDmetEnabled(){
+    const lnVal = parseNum($('ln')?.value);
+    const dm = $('dmet');
+    if (!dm) return;
+    const disable = Number.isFinite(lnVal) && lnVal === 0;
+    dm.disabled = disable;
+    if (disable) dm.value = '';
+  }
+
+  function clearAll(){
+    ['d1','d2','cell','insitu','dmet'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+    const ln = $('ln');
+    if (ln) ln.value = '0';
+    showMsg('', 'err');
+    render(null);
+    $('d1')?.focus();
+    syncDmetEnabled();
+  }
+
+  function copyResult(){
+    const res = calc();
+    if (!res){ render(null); return; }
+    render(res);
+
+    const txt = `Residual Cancer Burden (RCB): ${fmt(res.rcb, 3)}. ${res.cls}`;
+
+    // Clipboard API często nie działa w file:// (zapisany lokalnie HTML) lub w niesecure context.
+    const canClipboard = !!(navigator.clipboard && window.isSecureContext);
+
+    const fallbackCopy = () => {
+      const ta = $('textOut');
+      if (ta){
+        ta.focus();
+        ta.select();
+        ta.setSelectionRange(0, ta.value.length);
+      }
+      try{
+        const ok = document.execCommand('copy');
+        showMsg(ok ? 'Skopiowano.' : 'Nie udało się skopiować — zaznacz tekst i Ctrl+C.', ok ? 'ok' : 'err');
+      }catch(_){
+        showMsg('Nie udało się skopiować — zaznacz tekst i Ctrl+C.', 'err');
+      }
+      setTimeout(() => showMsg('', 'err'), 900);
+    };
+
+    if (canClipboard){
+      navigator.clipboard.writeText(txt).then(
+        () => { showMsg('Skopiowano.', 'ok'); setTimeout(() => showMsg('', 'err'), 900); },
+        () => fallbackCopy()
+      );
+    } else {
+      fallbackCopy();
+    }
+  }
+
+  // Enter navigation + smart skip (LN=0 -> licz)
+  const inputOrder = ['d1','d2','cell','insitu','ln','dmet'];
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const t = e.target;
+    if (!t || !t.tagName || t.tagName.toLowerCase() !== 'input') return;
+
+    e.preventDefault();
+
+    const id = t.id;
+    const idx = inputOrder.indexOf(id);
+
+    if (id === 'ln'){
+      const lnVal = parseNum($('ln')?.value);
+      if (Number.isFinite(lnVal) && lnVal === 0){
+        render(calc());
+        $('calcBtn')?.focus();
+        return;
+      }
+    }
+
+    if (idx > -1 && idx < inputOrder.length - 1){
+      $(inputOrder[idx + 1])?.focus();
+    } else {
+      render(calc());
+    }
+  });
+
+  // init + handlers
+  $('calcBtn')?.addEventListener('click', () => render(calc()));
+  $('clearBtn')?.addEventListener('click', clearAll);
+  $('copyBtn')?.addEventListener('click', copyResult);
+  $('ln')?.addEventListener('input', syncDmetEnabled);
+  $('ln')?.addEventListener('focus', () => $('ln')?.select());
+
+  window.addEventListener('load', () => {
+    $('d1')?.focus();
+    syncDmetEnabled();
+
+    // --- self-tests (konsola) ---
+    // Test 1: LN=0, pusty dmet -> brak błędu i nd=0
+    const t1 = (() => {
+      $('d1').value = '10';
+      $('d2').value = '10';
+      $('cell').value = '10';
+      $('insitu').value = '0';
+      $('ln').value = '0';
+      $('dmet').value = '';
+      const r = calc();
+      return r && Number.isFinite(r.rcb) && r.nd === 0;
+    })();
+
+    // Test 2: LN>0, pusty dmet -> calc() zwraca null
+    const t2 = (() => {
+      $('ln').value = '1';
+      $('dmet').value = '';
+      const r = calc();
+      return r === null;
+    })();
+
+    // Test 3: LN=0, dmet wpisany -> nd nadal 0
+    const t3 = (() => {
+      $('d1').value = '10';
+      $('d2').value = '10';
+      $('cell').value = '10';
+      $('insitu').value = '0';
+      $('ln').value = '0';
+      $('dmet').value = '12';
+      const r = calc();
+      return r && r.nd === 0;
+    })();
+
+    clearAll();
+    console.log('[RCB self-tests]', { t1, t2, t3 });
+  });
+</script>
+</body>
+</html>

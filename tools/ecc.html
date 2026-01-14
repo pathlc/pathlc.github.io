@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MMR + p53 + POLE – szablon raportu (IHC)</title>
+<style>
+  :root { --fg:#222; --muted:#666; --ok:#0a6; --bad:#b00; --warn:#c60; --card:#f7f7f7; }
+  body{font:16px system-ui,Segoe UI,Arial,sans-serif; color:var(--fg); margin:24px; line-height:1.35}
+  h1{font-size:16px; margin:0 0 12px 0}
+  .card{background:var(--card); padding:12px; border-radius:8px; border:1px solid #e3e3e3; margin-bottom:12px}
+  .row{display:flex; align-items:center; gap:14px; margin:6px 0}
+  .marker{font-weight:600; width:62px}
+  label{display:inline-flex; align-items:center; gap:6px}
+  input[type=checkbox], input[type=radio]{width:18px; height:18px}
+  .muted{color:var(--muted)}
+  textarea{width:100%; height:380px; padding:10px; border-radius:8px; border:1px solid #ccc; resize:vertical}
+  .actions{display:flex; gap:10px; margin-top:10px; flex-wrap:wrap}
+  .btn{border:1px solid #bbb; padding:8px 12px; border-radius:8px; background:white; cursor:pointer}
+  .btn.primary{border-color:#0a6; color:#0a6; font-weight:600}
+  .pill{display:inline-block; padding:3px 8px; border-radius:999px; border:1px solid #ddd; margin-left:6px}
+  .pill.ok{border-color:var(--ok); color:var(--ok)}
+  .pill.bad{border-color:var(--bad); color:var(--bad)}
+  .warn{color:var(--warn); font-size:14px; margin-top:8px;}
+  .flex-cols{display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap}
+  .flex-cols .card{flex:1; min-width:300px}
+</style>
+</head>
+<body>
+<div class="flex-cols">
+  <div style="flex:1">
+    <h1>Status genu POLE</h1>
+    <div class="card">
+      <div class="row"><label><input type="radio" name="pole" value="neg" checked>Nie wykryto wariantu patogennego (mutacji) genu POLE</label></div>
+      <div class="row"><label><input type="radio" name="pole" value="pos">Wykryto wariant patogenny (mutację) genu POLE</label></div>
+      <div class="row"><label><input type="radio" name="pole" value="unk">Brak danych</label></div>
+    </div>
+  </div>
+
+  <div style="flex:2">
+    <h1>Status białek MMR (IHC)</h1>
+    <div class="card">
+      <div class="row"><span class="muted">Zaznacz</span> „Utrata” lub „Częściowa” (brak zaznaczenia = ekspresja zachowana).</div>
+      <div class="row"><span class="marker">MLH1</span>
+        <label><input type="checkbox" data-marker="MLH1" data-type="loss">Utrata</label>
+        <label><input type="checkbox" data-marker="MLH1" data-type="partial">Częściowa</label>
+      </div>
+      <div class="row"><span class="marker">PMS2</span>
+        <label><input type="checkbox" data-marker="PMS2" data-type="loss">Utrata</label>
+        <label><input type="checkbox" data-marker="PMS2" data-type="partial">Częściowa</label>
+      </div>
+      <div class="row"><span class="marker">MSH2</span>
+        <label><input type="checkbox" data-marker="MSH2" data-type="loss">Utrata</label>
+        <label><input type="checkbox" data-marker="MSH2" data-type="partial">Częściowa</label>
+      </div>
+      <div class="row"><span class="marker">MSH6</span>
+        <label><input type="checkbox" data-marker="MSH6" data-type="loss">Utrata</label>
+        <label><input type="checkbox" data-marker="MSH6" data-type="partial">Częściowa</label>
+      </div>
+      <div class="row">
+        <span class="muted">Podsumowanie:</span>
+        <span id="badge" class="pill ok">pMMR</span>
+      </div>
+      <div id="warning" class="warn" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+  <h1>Status p53 (IHC)</h1>
+  <div class="card">
+    <div class="row"><span class="muted">Domyślnie: prawidłowa ekspresja. Zaznacz, jeśli nieprawidłowa:</span></div>
+    <div class="row"><label><input type="radio" name="p53" value="wt" checked>Prawidłowy (wild type staining)</label></div>
+    <div class="row"><label><input type="radio" name="p53" value="over">Nieprawidłowy – nadekspresja (overexpression)</label></div>
+    <div class="row"><label><input type="radio" name="p53" value="loss">Nieprawidłowy – całkowity brak ekspresji (complete loss / null phenotype)</label></div>
+    <div class="row"><label><input type="radio" name="p53" value="cyto">Nieprawidłowy – ekspresja cytoplazmatyczna (cytoplasmic staining)</label></div>
+    <div id="p53warn" class="warn" style="display:none"></div>
+  </div>
+
+  <div class="card">
+    <div class="muted" style="margin-bottom:6px">Tekst do raportu</div>
+    <textarea id="out" spellcheck="false"></textarea>
+    <div class="actions">
+      <button class="btn primary" id="copyBtn">Kopiuj do schowka</button>
+      <button class="btn" id="resetBtn">Wyczyść zaznaczenia</button>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const boxes = document.querySelectorAll('input[type=checkbox][data-marker]');
+  const p53radios = document.querySelectorAll('input[name="p53"]');
+  const poleRadios = document.querySelectorAll('input[name="pole"]');
+  const out = document.getElementById('out');
+  const badge = document.getElementById('badge');
+  const copyBtn = document.getElementById('copyBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const warning = document.getElementById('warning');
+  const p53warn = document.getElementById('p53warn');
+
+  boxes.forEach(cb=>{
+    cb.addEventListener('change', e=>{
+      if(e.target.checked){
+        const marker = e.target.getAttribute('data-marker');
+        document.querySelectorAll(`input[data-marker="${marker}"]`).forEach(x=>{
+          if(x !== e.target) x.checked = false;
+        });
+      }
+      update();
+    });
+  });
+
+  p53radios.forEach(r=>{ r.addEventListener('change', update); });
+  poleRadios.forEach(r=>{ r.addEventListener('change', update); });
+
+  resetBtn.addEventListener('click', ()=>{
+    boxes.forEach(cb=>cb.checked=false);
+    document.querySelector('input[name="p53"][value="wt"]').checked = true;
+    document.querySelector('input[name="pole"][value="neg"]').checked = true;
+    update();
+  });
+
+  copyBtn.addEventListener('click', async ()=>{
+    try{
+      await navigator.clipboard.writeText(out.value);
+      copyBtn.textContent = 'Skopiowano ✓';
+      setTimeout(()=>copyBtn.textContent='Kopiuj do schowka',1200);
+    }catch(err){
+      alert('Nie udało się skopiować: ' + err);
+    }
+  });
+
+  function statusOf(marker){
+    const loss = document.querySelector(`input[data-marker="${marker}"][data-type="loss"]`).checked;
+    const part = document.querySelector(`input[data-marker="${marker}"][data-type="partial"]`).checked;
+    if(loss) return 'loss';
+    if(part) return 'partial';
+    return 'retained';
+  }
+
+  function interpret(){
+    const st = { MLH1: statusOf('MLH1'), PMS2: statusOf('PMS2'), MSH2: statusOf('MSH2'), MSH6: statusOf('MSH6') };
+
+    const desc = {
+      retained: {short: '+', text: 'odczyn dodatni (ekspresja zachowana)'},
+      loss: {short: '−', text: 'odczyn ujemny (utrata ekspresji)'},
+      partial: {short: '~', text: 'częściowa (subklonalna) utrata ekspresji'}
+    };
+
+    const allRetained = Object.values(st).every(v=>v==='retained');
+
+    let header = '';
+    let details = '';
+    let summary = '';
+    let classification = '';
+
+    if(allRetained){
+      header = 'Status systemu naprawy nieprawidłowo sparowanych nukleotydów (MMR): nie stwierdzono zaburzenia - pMMR.';
+      details = `MLH1: ${desc[st.MLH1].text}. \nPMS2: ${desc[st.PMS2].text}. \nMSH2: ${desc[st.MSH2].text}. \nMSH6: ${desc[st.MSH6].text}.`;
+      summary = 'W komórkach nowotworowych stwierdzono prawidłową jądrową ekspresję białek MLH1, PMS2, MSH2 i MSH6. Brak immunohistochemicznych cech dMMR (zaburzenia systemu naprawy nieprawidłowo sparowanych nukleotydów).';
+      badge.textContent = 'pMMR';
+      badge.className = 'pill ok';
+      warning.style.display = 'none';
+    } else {
+      header = 'Status systemu naprawy nieprawidłowo sparowanych nukleotydów (MMR): stwierdzono zaburzenie - dMMR.';
+      details = `MLH1: ${desc[st.MLH1].text}. \nPMS2: ${desc[st.PMS2].text}. \nMSH2: ${desc[st.MSH2].text}. \nMSH6: ${desc[st.MSH6].text}.`;
+      const lost = Object.keys(st).filter(m=>st[m]==='loss');
+      const partial = Object.keys(st).filter(m=>st[m]==='partial');
+      const retained = Object.keys(st).filter(m=>st[m]==='retained');
+      const lostTxt = lost.length>0?`brak jądrowej ekspresji białek ${lost.join(' i ')}`:'';
+      const partTxt = partial.length>0?`częściową (subklonalną) utratę ekspresji białek ${partial.join(' i ')}`:'';
+      const retTxt = retained.length>0?`przy zachowanej ekspresji ${retained.join(' i ')}`:'';
+      summary = `W komórkach nowotworowych stwierdzono ${[lostTxt,partTxt,retTxt].filter(Boolean).join(', ')}. Utrata ekspresji wyżej opisanych białek stanowi immunohistochemiczny wykładnik zaburzenia systemu naprawy nieprawidłowo sparowanych nukleotydów - dMMR.`;
+
+      if((lost.includes('MLH1') || partial.includes('MLH1')) && !(lost.includes('MSH6') || partial.includes('MSH6'))){
+        summary += "\nWskazane badanie w kierunku hipermetylacji promotora genu MLH1 celem zróżnicowania z zaburzeniem linii germinalnej (zespołem Lyncha lub zespołami pokrewnymi).";
+      } else {
+        summary += "\nZaleca się poradnictwo w zakresie genetyki klinicznej celem przeprowadzenia badania genetycznego - potwierdzenia obecności zaburzeń w linii germinalnej (zespoł Lyncha lub zespoły pokrewne).";
+      }
+
+      badge.textContent = 'dMMR';
+      badge.className = 'pill bad';
+
+      const isoMLH1 = (st.MLH1 === 'loss' || st.MLH1 === 'partial') && !(st.PMS2 === 'loss' || st.PMS2 === 'partial');
+      const isoMSH2 = (st.MSH2 === 'loss' || st.MSH2 === 'partial') && !(st.MSH6 === 'loss' || st.MSH6 === 'partial');
+      if (isoMLH1 || isoMSH2) {
+        warning.textContent = '⚠️ Uwaga: izolowana utrata MLH1 (bez PMS2) lub MSH2 (bez MSH6) nie jest oczekiwanym wzorcem utraty – zalecana weryfikacja techniczna.';
+        warning.style.display = 'block';
+      } else {
+        warning.style.display = 'none';
+      }
+    }
+
+    // p53 – opis i ostrzeżenie HER2 (w UI, nie w raporcie)
+    const p53val = document.querySelector('input[name="p53"]:checked').value;
+    let p53txt = '';
+    if(p53val==='wt') p53txt = 'Status p53: prawidłowy (wild type staining).';
+    if(p53val==='over') p53txt = 'Status p53: nieprawidłowy - nadekspresja (overexpression).';
+    if(p53val==='loss') p53txt = 'Status p53: nieprawidłowy - całkowity brak ekspresji (complete loss / null phenotype).';
+    if(p53val==='cyto') p53txt = 'Status p53: nieprawidłowy - ekspresja cytoplazmatyczna (cytoplasmic staining).';
+
+    if(p53val!=='wt'){
+      p53warn.textContent = '⚠️ Rozważ dodatkową ocenę HER2.';
+      p53warn.style.display = 'block';
+    } else {
+      p53warn.style.display = 'none';
+    }
+
+    // POLE – tekst + klasyfikacja molekularna (priorytet: POLE brak danych > POLEmut > dMMR > p53abn > NSMP)
+    const poleval = document.querySelector('input[name="pole"]:checked').value;
+    let poleTxt = '';
+    if(poleval==='neg') poleTxt = 'Status genu POLE: nie wykryto wariantu patogennego (mutacji) genu POLE.\nRaport z badania molekularnego stanowi załącznik do niniejszego badania.';
+    if(poleval==='pos') poleTxt = 'Status genu POLE: wykryto wariant patogenny (mutację) genu POLE.\nRaport z badania molekularnego stanowi załącznik do niniejszego badania.';
+    if(poleval==='unk') poleTxt = 'Status genu POLE: brak danych.';
+
+    if(poleval==='unk'){
+      classification = 'Typ molekularny raka (WHO 2020/ESGO/ESTRO/ESP 2025): brak możliwości określenia - nieznany status genu POLE.';
+    } else if(poleval==='pos'){
+      classification = 'Typ molekularny raka (WHO 2020/ESGO/ESTRO/ESP 2025):\nRak endometrium z mutacją POLE (POLE-ultramutated endometrial carcinoma). Profil POLEmut - korzystne rokowanie';
+    } else if(!allRetained){
+      classification = 'Typ molekularny raka (WHO 2020/ESGO/ESTRO/ESP 2025):\nRak endometrium z deficytem białek naprawy niesparowanych nukleotydów (mismatch repair-deficient endometrial carcinoma) - dMMR.\nZaburzenie dMMR stanowi kryterium kwalifikacji do leczenia immunoterapią zgodnie z zapisami programu lekowego B.148.';
+    } else if(p53val!=='wt'){
+      classification = 'Typ molekularny raka (WHO 2020/ESGO/ESTRO/ESP 2025):\nRak endometrium z mutacją p53 (p53-mutant endometrial carcinoma) - p53abn.\nObecność mutacji TP53 (p53abn) stanowi wskazanie do intensyfikacji leczenia adiuwantowego.';
+    } else {
+      classification = 'Typ molekularny raka (WHO 2020/ESGO/ESTRO/ESP 2025):\nRak endometrium bez specjalnego podtypu molekularnego (no specific molecular profile endometrial carcinoma) - NSMP.';
+    }
+
+    return `${classification}\n\n${poleTxt}\n\n${header}\n${details}\n${summary}\n\n${p53txt}\n\nBadanie wykonano na preparatach z bloczka parafinowego nr: [].`;
+  }
+
+  function update(){ out.value = interpret(); }
+
+  // inicjalizacja
+  update();
+})();
+</script>
+</body>
+</html>

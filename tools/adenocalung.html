@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kalkulator stopnia zróżnicowania raka gruczołowego nieśluzowego płuca</title>
+  <style>
+    :root { --gap: 6px; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 20px; }
+    h1 { font-size: 1.1rem; margin: 0 0 12px; }
+    .row { display: grid; grid-template-columns: max-content max-content; gap: 6px; align-items: center; margin-bottom: 6px; }
+    label { white-space: normal; }
+    input { width: 7rem; padding: 6px; }
+    small { color: #666; }
+    .indent { padding-left: 1.25rem; border-left: 2px solid #eee; margin-left: .25rem; }
+    .actions { display: flex; gap: var(--gap); margin-top: 12px; align-items: center; }
+    button { padding: 6px 10px; cursor: pointer; }
+    pre { background: #fafafa; border: 1px solid #eee; padding: 10px; min-height: 4rem; white-space: pre-wrap; }
+    .muted { color: #666; }
+    .warn  { color: #b45309; }
+    .error { color: #b91c1c; }
+  </style>
+</head>
+<body>
+  <h1>Kalkulator stopnia zróżnicowania raka gruczołowego nieśluzowego płuca</h1>
+
+  <div class="row">
+    <label for="tapetujacy">– tapetujący:</label>
+    <input id="tapetujacy" inputmode="decimal" placeholder="%" />
+  </div>
+
+  <div class="row">
+    <label for="zrazikowy">– zrazikowy:</label>
+    <input id="zrazikowy" inputmode="decimal" placeholder="%" />
+  </div>
+  <div class="indent">
+    <div class="row">
+      <label for="zlozony">w tym: złożony ("complex glandular pattern"):</label>
+      <input id="zlozony" inputmode="decimal" placeholder="%" />
+    </div>
+    <div class="row">
+      <label for="sitowaty">w tym: sitowaty:</label>
+      <input id="sitowaty" inputmode="decimal" placeholder="%" />
+    </div>
+  </div>
+
+  <div class="row">
+    <label for="brodawkowaty">– brodawkowaty:</label>
+    <input id="brodawkowaty" inputmode="decimal" placeholder="%" />
+  </div>
+
+  <div class="row">
+    <label for="lity">– lity:</label>
+    <input id="lity" inputmode="decimal" placeholder="%" />
+  </div>
+
+  <div class="row">
+    <label for="mikrobrodawkowaty">– mikrobrodawkowaty:</label>
+    <input id="mikrobrodawkowaty" inputmode="decimal" placeholder="%" />
+  </div>
+
+  <div class="actions">
+    <button id="kopiuj" type="button">Kopiuj wynik</button>
+    <button id="reset" type="button">Wyczyść</button>
+    <small id="suma" class="muted" aria-live="polite"></small>
+  </div>
+
+  <h2 style="font-size:1rem;margin-top:16px;">Wynik</h2>
+  <pre id="wynik" aria-live="polite"></pre>
+  <div id="uwagi" class="muted" aria-live="polite"></div>
+
+  <script>
+    // ===== Elementy i stan =====
+    const ids = ['tapetujacy','zrazikowy','brodawkowaty','lity','mikrobrodawkowaty','zlozony','sitowaty'];
+    const el = {};
+    for (const id of ids) el[id] = document.getElementById(id);
+    const wynik = document.getElementById('wynik');
+    const suma  = document.getElementById('suma');
+    const uwagi = document.getElementById('uwagi');
+    const btnCopy = document.getElementById('kopiuj');
+    const btnReset = document.getElementById('reset');
+
+    let lastEdited = null;
+    let isAdjusting = false;
+
+    // ===== Utils =====
+    function parsePct(input) {
+      const raw = ((input && input.value) ? input.value : '').trim().replace(',', '.');
+      if (!raw) return { n: 0, hasValue: false };
+      const n = Number.parseFloat(raw);
+      if (!Number.isFinite(n)) return { n: 0, hasValue: false };
+      return { n: Math.max(0, n), hasValue: true };
+    }
+    function fmt(n) { return n.toLocaleString('pl-PL', { maximumFractionDigits: 2 }); }
+
+    // ===== Logika =====
+    function compute() {
+      // Parsowanie
+      const tap = parsePct(el.tapetujacy);
+      const zr  = parsePct(el.zrazikowy);
+      const bro = parsePct(el.brodawkowaty);
+      const lit = parsePct(el.lity);
+      const mik = parsePct(el.mikrobrodawkowaty);
+      const zlo = parsePct(el.zlozony);
+      const sit = parsePct(el.sitowaty);
+
+      // Ograniczenie: suma podtypów zrazikowego ≤ zrazikowy
+      let didClamp = false;
+      if (zr.hasValue) {
+        const limit = zr.n;
+        const zloVal = zlo.hasValue ? zlo.n : 0;
+        const sitVal = sit.hasValue ? sit.n : 0;
+        if (zloVal + sitVal > limit + 1e-9) {
+          isAdjusting = true;
+          if (lastEdited === 'zlozony') {
+            const newZlo = Math.max(0, limit - sitVal);
+            el.zlozony.value = newZlo.toLocaleString('pl-PL', { maximumFractionDigits: 2 });
+            zlo.n = newZlo; zlo.hasValue = true;
+          } else if (lastEdited === 'sitowaty') {
+            const newSit = Math.max(0, limit - zloVal);
+            el.sitowaty.value = newSit.toLocaleString('pl-PL', { maximumFractionDigits: 2 });
+            sit.n = newSit; sit.hasValue = true;
+          } else {
+            if (sitVal >= zloVal) {
+              const newSit = Math.max(0, limit - zloVal);
+              el.sitowaty.value = newSit.toLocaleString('pl-PL', { maximumFractionDigits: 2 });
+              sit.n = newSit; sit.hasValue = true;
+            } else {
+              const newZlo = Math.max(0, limit - sitVal);
+              el.zlozony.value = newZlo.toLocaleString('pl-PL', { maximumFractionDigits: 2 });
+              zlo.n = newZlo; zlo.hasValue = true;
+            }
+          }
+          isAdjusting = false;
+          didClamp = true;
+        }
+      }
+
+      // Zbierz główne komponenty
+      const main = [
+        { key: 'tapetujący', value: tap.n, shown: tap.hasValue },
+        { key: 'zrazikowy', value: zr.n, shown: zr.hasValue, sub: { zlozony: zlo, sitowaty: sit } },
+        { key: 'brodawkowaty', value: bro.n, shown: bro.hasValue },
+        { key: 'lity', value: lit.n, shown: lit.hasValue },
+        { key: 'mikrobrodawkowaty', value: mik.n, shown: mik.hasValue }
+      ].filter(function(x){ return x.shown && x.value > 0; });
+
+      // Sort malejąco
+      main.sort(function(a,b){ return b.value - a.value; });
+
+      // Wylicz stopień IASLC (G1–G3)
+      var grade = null;
+      var gradeNote = null;
+      var highGradeTotal = (lit && lit.hasValue ? lit.n : 0) + (mik && mik.hasValue ? mik.n : 0) + (sit && sit.hasValue ? sit.n : 0) + (zlo && zlo.hasValue ? zlo.n : 0);
+      if (main.length) {
+        try {
+          if (highGradeTotal >= 20 - 1e-9) {
+            grade = 3;
+          } else {
+            var domKey = main[0] ? main[0].key : null;
+            if (domKey === 'tapetujący') grade = 1;
+            else if (domKey === 'zrazikowy' || domKey === 'brodawkowaty') grade = 2;
+            else {
+              grade = 2; // fallback
+              if ((main[0] ? main[0].value : 0) < 20 - 1e-9 && (domKey === 'lity' || domKey === 'mikrobrodawkowaty')) {
+                gradeNote = 'Uwaga: dominujący wzorzec wysokogradowy <20%; sprawdź klasyfikację ręcznie.';
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Grade compute error:', e);
+          grade = null;
+        }
+      }
+
+      // Render wg szablonu + linia stopnia
+      const out = [];
+      if (main.length) {
+        out.push('Stopień histologicznego zróżnicowania: G' + (grade != null ? grade : '—'));
+        out.push('');
+        out.push('Dominujący wzorzec utkania:');
+        const d = main[0];
+        let domLine = '- ' + d.key + ': ' + fmt(d.value) + '%';
+        if (d.key === 'zrazikowy') {
+          const parts = [];
+          if (d.sub && d.sub.zlozony && d.sub.zlozony.hasValue && d.sub.zlozony.n > 0) parts.push('złożony ("complex glandular pattern"): ' + fmt(d.sub.zlozony.n) + '%');
+          if (d.sub && d.sub.sitowaty && d.sub.sitowaty.hasValue && d.sub.sitowaty.n > 0) parts.push('sitowaty: ' + fmt(d.sub.sitowaty.n) + '%');
+          if (parts.length) domLine += ', w tym ' + parts.join(', ');
+        }
+        out.push(domLine);
+        const rest = main.slice(1);
+        if (rest.length) {
+          out.push('Pozostałe wzorce utkania:');
+          for (let i=0;i<rest.length;i++) {
+            const r = rest[i];
+            let line = '- ' + r.key + ': ' + fmt(r.value) + '%';
+            if (r.key === 'zrazikowy') {
+              const parts = [];
+              if (r.sub && r.sub.zlozony && r.sub.zlozony.hasValue && r.sub.zlozony.n > 0) parts.push('złożony ("complex glandular pattern"): ' + fmt(r.sub.zlozony.n) + '%');
+              if (r.sub && r.sub.sitowaty && r.sub.sitowaty.hasValue && r.sub.sitowaty.n > 0) parts.push('sitowaty: ' + fmt(r.sub.sitowaty.n) + '%');
+              if (parts.length) line += ', w tym ' + parts.join(', ');
+            }
+            out.push(line);
+          }
+        }
+      }
+      wynik.innerText = out.join('\n');
+
+      // Suma top-level i uwagi
+      const topSum = (tap.hasValue ? tap.n : 0) + (zr.hasValue ? zr.n : 0) + (bro.hasValue ? bro.n : 0) + (lit.hasValue ? lit.n : 0) + (mik.hasValue ? mik.n : 0);
+      suma.textContent = 'Suma głównych: ' + fmt(topSum) + '%';
+      suma.className = topSum === 100 ? 'muted' : (topSum > 100 ? 'error' : 'warn');
+
+      const notes = [];
+      if (didClamp) notes.push('Skorygowano: suma podtypów ograniczona do wartości „zrazikowy”.');
+      else if ((zlo.hasValue || sit.hasValue) && !zr.hasValue) notes.push('Info: podano podtypy zrazikowego, ale brak wartości dla "zrazikowy".');
+      if (typeof gradeNote === 'string' && gradeNote) notes.push(gradeNote);
+      uwagi.textContent = notes.join(' ');
+
+      btnCopy.disabled = wynik.innerText.trim() === '';
+    }
+
+    function fallbackCopy(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      let ok = false; try { ok = document.execCommand && document.execCommand('copy'); } catch (_) {}
+      document.body.removeChild(ta);
+      return !!ok;
+    }
+
+    function copyOut() {
+      const text = wynik.innerText.trim(); if (!text) return;
+      const success = () => { btnCopy.textContent = 'Skopiowano!'; setTimeout(() => (btnCopy.textContent = 'Kopiuj wynik'), 1200); };
+      const failure = (why) => { btnCopy.textContent = 'Nie skopiowano'; setTimeout(() => (btnCopy.textContent = 'Kopiuj wynik'), 1500); console.warn('Clipboard copy failed:', why); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(success).catch(() => { const ok = fallbackCopy(text); ok ? success() : failure('fallback failed'); });
+      } else { const ok = fallbackCopy(text); ok ? success() : failure('no clipboard & fallback failed'); }
+    }
+
+    function resetAll() { for (const id of ids) el[id].value = ''; compute(); }
+
+    function tryCompute() { try { compute(); } catch (e) { console.error(e); uwagi.textContent = 'Błąd: ' + (e && e.message ? e.message : e); wynik.innerText = ''; } }
+
+    // Zdarzenia
+    for (const id of ids) el[id].addEventListener('input', function(){ if (isAdjusting) return; lastEdited = id; tryCompute(); });
+
+    // Nawigacja Enter/Shift+Enter między polami w kolejności widocznej w DOM
+    const inputsOrdered = Array.from(document.querySelectorAll('input'));
+    inputsOrdered.forEach((inp, idx) => {
+      inp.addEventListener('keydown', function(ev){
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          tryCompute();
+          const dir = ev.shiftKey ? -1 : 1;
+          let j = idx + dir;
+          if (j < 0) j = inputsOrdered.length - 1;
+          if (j >= inputsOrdered.length) j = 0;
+          const next = inputsOrdered[j];
+          next.focus();
+          if (typeof next.select === 'function') next.select();
+        }
+      });
+    });
+    btnCopy.addEventListener('click', copyOut);
+    btnReset.addEventListener('click', resetAll);
+
+    // Start
+    tryCompute();
+
+    // ===== Testy ręczne (runTests) =====
+    function setValues(map) { for (const k in map) if (el[k]) el[k].value = map[k]; tryCompute(); }
+    function getLines() { return wynik.innerText.trim().split(/\n+/).filter(Boolean); }
+    function assert(cond, msg) { if (!cond) throw new Error(msg || 'Assertion failed'); }
+    function clearAll() { resetAll(); }
+
+    function runTests() {
+      const original = {}; ids.forEach(id => original[id] = el[id].value);
+      let passed = 0, failed = 0; const results = [];
+      function test(name, fn) { try { fn(); passed++; results.push('✔ ' + name); } catch (e) { failed++; results.push('✘ ' + name + ': ' + e.message); } }
+
+      test('Grade & headings', () => {
+        clearAll(); setValues({ tapetujacy: '10', zrazikowy: '50', brodawkowaty: '30', mikrobrodawkowaty: '10' });
+        const lines = getLines();
+        assert(lines[0].indexOf('Stopień histologicznego zróżnicowania: G') === 0, 'Grade heading present');
+        assert(lines[1] === 'Dominujący wzorzec utkania:', 'Dominujący heading present');
+        const domLine = lines.find(l => l.indexOf('- zrazikowy:') === 0);
+        assert(!!domLine && domLine.indexOf('50%') > -1, 'Dominant value 50%');
+        assert(lines.indexOf('Pozostałe wzorce utkania:') > -1, 'Pozostałe heading present');
+        assert(lines.some(l => l.indexOf('- brodawkowaty: 30') > -1), 'Contains brodawkowaty: 30%');
+      });
+
+      test('Clamp subtypes & dominant format', () => {
+        clearAll(); setValues({ zrazikowy: '20', zlozony: '15', sitowaty: '10' });
+        lastEdited = 'sitowaty'; tryCompute();
+        const dom = getLines().find(l => l.indexOf('- zrazikowy:') === 0) || '';
+        assert(dom.indexOf('- zrazikowy: 20') > -1, 'Dominant zrazikowy: 20%');
+        assert(dom.indexOf(', w tym ') > -1 && dom.indexOf(', w tym:') === -1, 'Comma and no colon before "w tym"');
+        assert(dom.indexOf('złożony ("complex glandular pattern"): 15%') > -1 && dom.indexOf('sitowaty: 5%') > -1, 'Subtypes 15% and 5%');
+      });
+
+      test('Decimal comma', () => {
+        clearAll(); setValues({ brodawkowaty: '12,5' });
+        const lines = getLines();
+        assert(lines[0].indexOf('Stopień histologicznego zróżnicowania: G') === 0, 'Grade line present');
+        assert(lines.some(l => l.indexOf('12,5%') > -1), 'Comma formatted 12,5%');
+      });
+
+      test('G3 when HG ≥20%', () => {
+        clearAll(); setValues({ zrazikowy: '30', lity: '10', mikrobrodawkowaty: '10' });
+        const first = getLines()[0] || '';
+        assert(first === 'Stopień histologicznego zróżnicowania: G3', 'Expect G3 when HG sum ≥20%');
+      });
+
+      test('G1 when lepidic predominant & low HG', () => {
+        clearAll(); setValues({ tapetujacy: '60', zrazikowy: '30', lity: '5', mikrobrodawkowaty: '5' });
+        const first = getLines()[0] || '';
+        assert(first === 'Stopień histologicznego zróżnicowania: G1', 'Expect G1');
+      });
+
+      test('G2 when acinar predominant & low HG', () => {
+        clearAll(); setValues({ zrazikowy: '70', brodawkowaty: '20', lity: '5' });
+        const first = getLines()[0] || '';
+        assert(first === 'Stopień histologicznego zróżnicowania: G2', 'Expect G2');
+      });
+
+      // Restore
+      for (const id of ids) el[id].value = original[id]; tryCompute();
+      const summary = 'Tests passed: ' + passed + ', failed: ' + failed; console.log(summary); results.forEach(r => console.log(r));
+      return { passed, failed, results };
+    }
+    window.runTests = runTests;
+
+    // Użytkowy przykład
+    window.runUserExample = function() {
+      resetAll();
+      setValues({ zrazikowy: '50', zlozony: '20', tapetujacy: '30', lity: '20' });
+      return wynik.innerText;
+    };
+  </script>
+</body>
+</html>
