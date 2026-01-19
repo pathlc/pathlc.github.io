@@ -1,90 +1,140 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sortowanie Marginesów</title>
-<script>
-function sortMargins() {
-    let margins = [
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sortowanie marginesów • pathlc</title>
+  <link rel="stylesheet" href="../css/style.css">
+
+  <style>
+    /* Lokalnie tylko dla tego narzędzia */
+    .form-grid{
+        font-size: 16px;
+        max-width: 760px;
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        gap: 12px 16px;
+        align-items: center;
+        margin-top: 16px;
+    }
+    .form-grid label{
+      margin: 0;
+      font-weight: 600;
+    }
+    .form-grid input{
+      width: 100%;
+      max-width: 420px; /* opcjonalnie */
+    }
+    .actions{
+      margin-top: 16px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    /* mobile */
+    @media (max-width: 640px){
+      .form-grid{
+        grid-template-columns: 1fr;
+      }
+      .form-grid input{
+        max-width: 100%;
+      }
+    }
+  </style>
+
+  <script>
+    function sortMargins() {
+      let margins = [
         { name: "od strony godz. 3", value: parseFloat(document.getElementById("m3").value) },
         { name: "od strony godz. 6", value: parseFloat(document.getElementById("m6").value) },
         { name: "od strony godz. 9", value: parseFloat(document.getElementById("m9").value) },
         { name: "od strony godz. 12", value: parseFloat(document.getElementById("m12").value) },
         { name: "margines głęboki", value: parseFloat(document.getElementById("mg").value) },
         { name: "od strony skóry", value: parseFloat(document.getElementById("ms").value) }
-    ];
-    margins.sort((a, b) => a.value - b.value);
+      ];
 
-    let output = "<h3>Guz usunięty z marginesem otaczających tkanek, o szerokości marginesów:</h3><ul>";
-    let textOutput = "Guz usunięty z marginesem otaczających tkanek, o szerokości marginesów:\n";
+      // opcjonalnie: odfiltruj puste/NaN, żeby sortowanie nie wariowało
+      margins = margins.filter(m => Number.isFinite(m.value));
 
-    margins.forEach((margin, index) => {
-        let formattedValue = margin.value.toLocaleString("pl-PL", { minimumFractionDigits: 1 });
+      margins.sort((a, b) => a.value - b.value);
+
+      let output = "<h3>Guz usunięty z marginesem otaczających tkanek, o szerokości marginesów:</h3><ul>";
+      let textOutput = "Guz usunięty z marginesem otaczających tkanek, o szerokości marginesów:\n";
+
+      margins.forEach((margin, index) => {
+        let formattedValue = margin.value.toLocaleString("pl-PL", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
         output += `<li>- ${margin.name} – <strong>${formattedValue} mm</strong></li>`;
         textOutput += `- ${margin.name} – ${formattedValue} mm`;
-        if (index < margins.length - 1) {
-            textOutput += ",\n";
-        } else {
-            textOutput += ".\n";
-        }
-    });
+        textOutput += (index < margins.length - 1) ? ",\n" : ".\n";
+      });
 
-    output += "</ul><button onclick='copyToClipboard()'>Kopiuj wynik</button>";
-    document.getElementById("result").innerHTML = output;
-    document.getElementById("clipboard-text").value = textOutput;
-}
+      output += "</ul><button type='button' onclick='copyToClipboard()'>Kopiuj wynik</button>";
+      document.getElementById("result").innerHTML = output;
+      document.getElementById("clipboard-text").value = textOutput;
+    }
 
-function copyToClipboard() {
-    let text = document.getElementById("clipboard-text").value;
-    navigator.clipboard.writeText(text);
-}
+    function copyToClipboard() {
+      let text = document.getElementById("clipboard-text").value;
+      navigator.clipboard.writeText(text);
+    }
 
-function clearFields() {
-    document.getElementById("m3").value = "";
-    document.getElementById("m6").value = "";
-    document.getElementById("m9").value = "";
-    document.getElementById("m12").value = "";
-    document.getElementById("mg").value = "";
-    document.getElementById("ms").value = "";
-    document.getElementById("result").innerHTML = "";
-    document.getElementById("clipboard-text").value = "";
-    document.getElementById("m3").focus();
-}
+    function clearFields() {
+      ["m3","m6","m9","m12","mg","ms"].forEach(id => document.getElementById(id).value = "");
+      document.getElementById("result").innerHTML = "";
+      document.getElementById("clipboard-text").value = "";
+      document.getElementById("m3").focus();
+    }
 
-window.onload = function() {
-    // focus na pierwszym polu
-    document.getElementById("m3").focus();
+    window.onload = function() {
+      document.getElementById("m3").focus();
 
-    // Enter -> kolejne pole, w ostatnim polu Enter uruchamia sortMargins()
-    const fields = ["m3", "m6", "m9", "m12", "mg", "ms"];
-    fields.forEach((id, index) => {
+      const fields = ["m3", "m6", "m9", "m12", "mg", "ms"];
+      fields.forEach((id, index) => {
         const el = document.getElementById(id);
         el.addEventListener("keydown", function(e) {
-            if (e.key === "Enter") {
-                e.preventDefault();
-                if (index < fields.length - 1) {
-                    document.getElementById(fields[index + 1]).focus();
-                } else {
-                    sortMargins();
-                }
+          if (e.key === "Enter") {
+            e.preventDefault();
+            if (index < fields.length - 1) {
+              document.getElementById(fields[index + 1]).focus();
+            } else {
+              sortMargins();
             }
+          }
         });
-    });
-};
-</script>
+      });
+    };
+  </script>
 </head>
+
 <body>
-<h2>Wprowadź szerokości marginesów (w mm)</h2>
-<label>Margines od strony godz. 3: <input type="number" id="m3" step="0.1"></label><br>
-<label>Margines od strony godz. 6: <input type="number" id="m6" step="0.1"></label><br>
-<label>Margines od strony godz. 9: <input type="number" id="m9" step="0.1"></label><br>
-<label>Margines od strony godz. 12: <input type="number" id="m12" step="0.1"></label><br>
-<label>Margines głęboki: <input type="number" id="mg" step="0.1"></label><br>
-<label>Margines od strony skóry: <input type="number" id="ms" step="0.1"></label><br>
-<button onclick="sortMargins()">Sortuj</button>
-<button onclick="clearFields()">Wyczyść</button>
-<div id="result"></div>
-<textarea id="clipboard-text" style="position:absolute; left:-9999px;"></textarea>
+  <h2>Wprowadź szerokości marginesów (w mm)</h2>
+
+  <div class="form-grid">
+    <label for="m3">Margines od strony godz. 3:</label>
+    <input type="number" id="m3" step="0.1" inputmode="decimal">
+
+    <label for="m6">Margines od strony godz. 6:</label>
+    <input type="number" id="m6" step="0.1" inputmode="decimal">
+
+    <label for="m9">Margines od strony godz. 9:</label>
+    <input type="number" id="m9" step="0.1" inputmode="decimal">
+
+    <label for="m12">Margines od strony godz. 12:</label>
+    <input type="number" id="m12" step="0.1" inputmode="decimal">
+
+    <label for="mg">Margines głęboki:</label>
+    <input type="number" id="mg" step="0.1" inputmode="decimal">
+
+    <label for="ms">Margines od strony skóry:</label>
+    <input type="number" id="ms" step="0.1" inputmode="decimal">
+  </div>
+
+  <div class="actions">
+    <button type="button" onclick="sortMargins()">Sortuj</button>
+    <button type="button" onclick="clearFields()">Wyczyść</button>
+  </div>
+
+  <div id="result" style="margin-top: 16px;"></div>
+  <textarea id="clipboard-text" style="position:absolute; left:-9999px;"></textarea>
 </body>
 </html>
