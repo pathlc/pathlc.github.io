@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PatARCH • AutoHotkey • pathlc</title>
+  <link rel="stylesheet" href="../css/style.css">
+
+  <style>
+    .tool-header{
+      display:flex;
+      align-items:center;
+      gap:16px;
+      margin-bottom: 12px;
+    }
+
+    .ahk-icon{
+      width:56px;
+      height:56px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+      letter-spacing:0.5px;
+      color:#1c7ed6;
+      background:#f8f9fa;
+      font-size:18px;
+      flex-shrink:0;
+    }
+
+    .tool-lead{
+      color: var(--muted);
+      max-width: 720px;
+    }
+
+    .section{
+      margin-top: 24px;
+      max-width: 760px;
+    }
+
+    .cta{
+      margin-top: 20px;
+      display:inline-block;
+      padding:12px 16px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      text-decoration:none;
+      color:inherit;
+      font-weight:600;
+    }
+
+    .cta:hover{
+      border-color: var(--accent);
+    }
+
+    ul{
+      padding-left: 18px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <header class="site-header">
+      <div class="brand">
+        <a class="brand-title" href="../index.html">pathlc</a>
+        <div class="brand-subtitle">proste narzędzia dla patologów</div>
+      </div>
+      <nav class="nav">
+        <a href="../index.html">Strona główna</a>
+        <a href="https://github.com/pathlc/patarch-skrypt" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <div class="tool-header">
+        <div class="ahk-icon">AHK</div>
+        <h1 style="margin:0;">PatARCH add-on</h1>
+      </div>
+
+      <p class="tool-lead">
+        PatARCH add-on to skrypt <strong>AutoHotkey</strong> wspierający codzienną pracę
+        patomorfologa: automatyzację powtarzalnych czynności, szybkie wstawianie treści,
+        nawigację po systemie PatArch oraz drobne narzędzia pomocnicze.
+      </p>
+
+      <section class="section">
+        <h2>Co to jest?</h2>
+        <p>
+          To <strong>narzędzie desktopowe</strong> (Windows), działające lokalnie.
+          Nie jest to aplikacja webowa ani instalator „kliknij i działa”.
+          Skrypt jest rozwijany iteracyjnie i dostosowany do realnych zastosowań
+          w diagnostyce histopatologicznej.
+        </p>
+      </section>
+
+      <section class="section">
+        <h2>Co potrafi (przykłady)</h2>
+        <ul>
+          <li>hotstringi i skróty klawiaturowe do raportowania</li>
+          <li>małe GUI do liczenia / wstawiania danych</li>
+          <li>automatyzacja sekwencji kliknięć i nawigacji</li>
+          <li>integracja z innymi narzędziami pomocniczymi</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>Dla kogo?</h2>
+        <p>
+          Dla osób pracujących na Windowsie i PatARCH, które:
+        </p>
+        <ul>
+          <li>nie boją się lekkiej automatyzacji</li>
+          <li>chcą skrócić czas rutynowych czynności</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>Jak zacząć</h2>
+        <p>
+          Projekt jest hostowany na GitHubie wraz z kodem źródłowym
+          i instrukcjami uruchomienia.
+        </p>
+
+        <a class="cta"
+           href="https://github.com/pathlc/patarch-skrypt"
+           target="_blank"
+           rel="noopener">
+          Otwórz repozytorium PatARCH na GitHub
+        </a>
+      </section>
+
+      <section class="section">
+        <h2>Uwagi</h2>
+        <p class="tool-lead">
+          Skrypt nie jest produktem komercyjnym ani oficjalnym oprogramowaniem medycznym.
+          Używany jest na własną odpowiedzialność i rozwijany w miarę potrzeb.
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div>© pathlc </div>
+    </footer>
+
+  </div>
+</body>
+</html>
