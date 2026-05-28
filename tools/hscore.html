@@ -104,7 +104,7 @@
           <div class="row" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
             <button class="btn" id="copyReport">Kopiuj raport</button>
           </div>
-          <pre class="preview mono" id="reportPreview">Status ekspresji receptora: ujemny. Ekspresja w &lt;1% komórek.</pre>
+          <pre class="preview mono" id="reportPreview">Status ekspresji receptora: negatywny. Ekspresja w &lt;1% komórek.</pre>
         </div>
 
         <details>
@@ -167,7 +167,7 @@
       v1 = clamp01(v1); v2 = clamp01(v2); v3 = clamp01(v3);
       const raw = v1 + v2 + v3;               // może być ułamkowe (np. 0.4)
       const pct = Math.round(raw);            // zgodne z innymi miejscami
-      const label = raw >= 1 ? 'dodatni' : 'ujemny';
+      const label = raw >= 1 ? 'pozytywny' : 'negatywny';
       const percentText = (raw < 1) ? '<1%' : `${pct}%`;
       return { label, percent: pct, percentText, raw };
     }
@@ -310,10 +310,10 @@
       // Expression status tests
       (function(){
         let s = getExpressionStatus(0,0,0);
-        t('Expression 0,0,0 → ujemny', s.label, 'ujemny');
+        t('Expression 0,0,0 → negatywny', s.label, 'negatywny');
         t('Expression 0,0,0 → percentText <1%', s.percentText, '<1%');
         s = getExpressionStatus(1,0,0);
-        t('Expression 1,0,0 → dodatni', s.label, 'dodatni');
+        t('Expression 1,0,0 → pozytywny', s.label, 'pozytywny');
         t('Expression 1,0,0 → 1%', s.percent, 1);
         s = getExpressionStatus(0.4,0,0);
         t('Expression 0.4,0,0 → percentText <1%', s.percentText, '<1%');
@@ -356,7 +356,7 @@
         const backup = {v1:p1.value, v2:p2.value, v3:p3.value};
         p1.value='5'; p2.value='10'; p3.value='5'; update();
         const s = buildReport().split('\n')[0];
-        t('Report line A format', s, 'Status ekspresji receptora: dodatni. Ekspresja w 20% komórek.');
+        t('Report line A format', s, 'Status ekspresji receptora: pozytywny. Ekspresja w 20% komórek.');
         p1.value=backup.v1; p2.value=backup.v2; p3.value=backup.v3; update();
       })();
 
@@ -365,7 +365,7 @@
         const backup = {v1:p1.value, v2:p2.value, v3:p3.value};
         p1.value='0.4'; p2.value='0'; p3.value='0'; update();
         const s = buildReport();
-        t('Report <1% single line', s, 'Status ekspresji receptora: ujemny. Ekspresja w <1% komórek.');
+        t('Report <1% single line', s, 'Status ekspresji receptora: negatywny. Ekspresja w <1% komórek.');
         p1.value=backup.v1; p2.value=backup.v2; p3.value=backup.v3; update();
       })();
 
