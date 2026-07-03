@@ -245,7 +245,7 @@
       alert("Kopiowanie zablokowane przez przeglądarkę. Zaznaczyłem tekst – wciśnij Ctrl+C."); return false;
     }
 
-    function resetAll(){ ['mac','lim','neu','eos'].forEach(id=>$(id).value=0); $("areaField").value=1; $("areaTotal").value=31; $("volSource").value=80; $("volTarget").value=1; $("cellularityQual").value='umiarkowanie'; $("kDigits").value='0'; $("addIronNote").checked=false; $("addBronchialEpith").checked=true; $("autoQual").checked=true; compute(); }
+    function resetAll(){ ['mac','lim','neu','eos'].forEach(id=>$(id).value=0); $("areaField").value=1; $("areaTotal").value=31; $("volSource").value=20; $("volTarget").value=1; $("cellularityQual").value='umiarkowanie'; $("kDigits").value='0'; $("addIronNote").checked=false; $("addBronchialEpith").checked=true; $("autoQual").checked=true; compute(); }
 
     document.addEventListener('keydown',(ev)=>{ if(ev.key==='Enter'){ const focusables=["mac","lim","neu","eos","areaField","areaTotal","volSource","volTarget"].map(id=>$(id)); const i=focusables.indexOf(document.activeElement); if(i>-1){ ev.preventDefault(); const n=focusables[i+1]||$("cellularityQual"); n.focus(); } } });
 
