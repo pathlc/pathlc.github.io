@@ -262,7 +262,7 @@
       const v2 = clamp01(parseNum(p2.value));
       const v3 = clamp01(parseNum(p3.value));
       const expr = getExpressionStatus(v1,v2,v3);
-      const lineA = `Status ekspresji receptora [estrogenowego (ER)][progesteronowego (PR)]: ${expr.label}. Ekspresja w ${expr.percentText} komórek.`;
+      const lineA = `Status ekspresji receptora [estrogenowego (ER)][progesteronowego (PR)]: ${expr.label}. Ekspresja w[ ok.] ${expr.percentText} komórek.`;
       if (expr.raw < 1) return lineA;
       const label = getIntensityList(v1,v2,v3);
       const scoreTxt = scoreEl.textContent;
