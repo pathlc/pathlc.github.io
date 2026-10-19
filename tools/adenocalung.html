@@ -35,12 +35,8 @@
   </div>
   <div class="indent">
     <div class="row">
-      <label for="zlozony">w tym: złożony ("complex glandular pattern"):</label>
+      <label for="zlozony">w tym: sitowaty i/lub "complex glandular pattern":</label>
       <input id="zlozony" inputmode="decimal" placeholder="%" />
-    </div>
-    <div class="row">
-      <label for="sitowaty">w tym: sitowaty:</label>
-      <input id="sitowaty" inputmode="decimal" placeholder="%" />
     </div>
   </div>
 
@@ -71,7 +67,7 @@
 
   <script>
     // ===== Elementy i stan =====
-    const ids = ['tapetujacy','zrazikowy','brodawkowaty','lity','mikrobrodawkowaty','zlozony','sitowaty'];
+    const ids = ['tapetujacy','zrazikowy','brodawkowaty','lity','mikrobrodawkowaty','zlozony'];
     const el = {};
     for (const id of ids) el[id] = document.getElementById(id);
     const wynik = document.getElementById('wynik');
@@ -80,7 +76,6 @@
     const btnCopy = document.getElementById('kopiuj');
     const btnReset = document.getElementById('reset');
 
-    let lastEdited = null;
     let isAdjusting = false;
 
     // ===== Utils =====
@@ -102,44 +97,20 @@
       const lit = parsePct(el.lity);
       const mik = parsePct(el.mikrobrodawkowaty);
       const zlo = parsePct(el.zlozony);
-      const sit = parsePct(el.sitowaty);
 
-      // Ograniczenie: suma podtypów zrazikowego ≤ zrazikowy
+      // Ograniczenie: łączny udział sitowatego / complex glandular ≤ zrazikowy
       let didClamp = false;
-      if (zr.hasValue) {
-        const limit = zr.n;
-        const zloVal = zlo.hasValue ? zlo.n : 0;
-        const sitVal = sit.hasValue ? sit.n : 0;
-        if (zloVal + sitVal > limit + 1e-9) {
-          isAdjusting = true;
-          if (lastEdited === 'zlozony') {
-            const newZlo = Math.max(0, limit - sitVal);
-            el.zlozony.value = newZlo.toLocaleString('pl-PL', { maximumFractionDigits: 2 });
-            zlo.n = newZlo; zlo.hasValue = true;
-          } else if (lastEdited === 'sitowaty') {
-            const newSit = Math.max(0, limit - zloVal);
-            el.sitowaty.value = newSit.toLocaleString('pl-PL', { maximumFractionDigits: 2 });
-            sit.n = newSit; sit.hasValue = true;
-          } else {
-            if (sitVal >= zloVal) {
-              const newSit = Math.max(0, limit - zloVal);
-              el.sitowaty.value = newSit.toLocaleString('pl-PL', { maximumFractionDigits: 2 });
-              sit.n = newSit; sit.hasValue = true;
-            } else {
-              const newZlo = Math.max(0, limit - sitVal);
-              el.zlozony.value = newZlo.toLocaleString('pl-PL', { maximumFractionDigits: 2 });
-              zlo.n = newZlo; zlo.hasValue = true;
-            }
-          }
-          isAdjusting = false;
-          didClamp = true;
-        }
+      if (zr.hasValue && zlo.hasValue && zlo.n > zr.n + 1e-9) {
+        isAdjusting = true;
+        el.zlozony.value = fmt(zr.n);
+        zlo.n = zr.n;
+        isAdjusting = false;
+        didClamp = true;
       }
-
       // Zbierz główne komponenty
       const main = [
         { key: 'tapetujący', value: tap.n, shown: tap.hasValue },
-        { key: 'zrazikowy', value: zr.n, shown: zr.hasValue, sub: { zlozony: zlo, sitowaty: sit } },
+        { key: 'zrazikowy', value: zr.n, shown: zr.hasValue, sub: { zlozony: zlo } },
         { key: 'brodawkowaty', value: bro.n, shown: bro.hasValue },
         { key: 'lity', value: lit.n, shown: lit.hasValue },
         { key: 'mikrobrodawkowaty', value: mik.n, shown: mik.hasValue }
@@ -151,7 +122,7 @@
       // Wylicz stopień IASLC (G1–G3)
       var grade = null;
       var gradeNote = null;
-      var highGradeTotal = (lit && lit.hasValue ? lit.n : 0) + (mik && mik.hasValue ? mik.n : 0) + (sit && sit.hasValue ? sit.n : 0) + (zlo && zlo.hasValue ? zlo.n : 0);
+      var highGradeTotal = (lit && lit.hasValue ? lit.n : 0) + (mik && mik.hasValue ? mik.n : 0) + (zlo && zlo.hasValue ? zlo.n : 0);
       if (main.length) {
         try {
           if (highGradeTotal >= 20 - 1e-9) {
@@ -183,11 +154,10 @@
         let domLine = '- ' + d.key + ': ' + fmt(d.value) + '%';
         if (d.key === 'zrazikowy') {
           const parts = [];
-          if (d.sub && d.sub.zlozony && d.sub.zlozony.hasValue && d.sub.zlozony.n > 0) parts.push('złożony ("complex glandular pattern"): ' + fmt(d.sub.zlozony.n) + '%');
-          if (d.sub && d.sub.sitowaty && d.sub.sitowaty.hasValue && d.sub.sitowaty.n > 0) parts.push('sitowaty: ' + fmt(d.sub.sitowaty.n) + '%');
-          if (parts.length) domLine += ', w tym ' + parts.join(', ');
+          if (d.sub && d.sub.zlozony && d.sub.zlozony.hasValue && d.sub.zlozony.n > 0) parts.push('sitowaty i/lub "complex glandular pattern": ' + fmt(d.sub.zlozony.n) + '%');
+          if (parts.length) domLine += ' (w tym ' + parts.join(', ') + ')';
         }
-        out.push(domLine);
+        out.push(domLine + '.');
         const rest = main.slice(1);
         if (rest.length) {
           out.push('Pozostałe wzorce utkania:');
@@ -196,11 +166,10 @@
             let line = '- ' + r.key + ': ' + fmt(r.value) + '%';
             if (r.key === 'zrazikowy') {
               const parts = [];
-              if (r.sub && r.sub.zlozony && r.sub.zlozony.hasValue && r.sub.zlozony.n > 0) parts.push('złożony ("complex glandular pattern"): ' + fmt(r.sub.zlozony.n) + '%');
-              if (r.sub && r.sub.sitowaty && r.sub.sitowaty.hasValue && r.sub.sitowaty.n > 0) parts.push('sitowaty: ' + fmt(r.sub.sitowaty.n) + '%');
-              if (parts.length) line += ', w tym ' + parts.join(', ');
+              if (r.sub && r.sub.zlozony && r.sub.zlozony.hasValue && r.sub.zlozony.n > 0) parts.push('sitowaty i/lub "complex glandular pattern": ' + fmt(r.sub.zlozony.n) + '%');
+              if (parts.length) line += ' (w tym ' + parts.join(', ') + ')';
             }
-            out.push(line);
+            out.push(line + (i < rest.length - 1 ? ';' : '.'));
           }
         }
       }
@@ -212,8 +181,8 @@
       suma.className = topSum === 100 ? 'muted' : (topSum > 100 ? 'error' : 'warn');
 
       const notes = [];
-      if (didClamp) notes.push('Skorygowano: suma podtypów ograniczona do wartości „zrazikowy”.');
-      else if ((zlo.hasValue || sit.hasValue) && !zr.hasValue) notes.push('Info: podano podtypy zrazikowego, ale brak wartości dla "zrazikowy".');
+      if (didClamp) notes.push('Skorygowano: łączny udział sitowatego / complex glandular ograniczony do wartości „zrazikowy”.');
+      else if (zlo.hasValue && !zr.hasValue) notes.push('Info: podano udział sitowatego / complex glandular, ale brak wartości dla "zrazikowy".');
       if (typeof gradeNote === 'string' && gradeNote) notes.push(gradeNote);
       uwagi.textContent = notes.join(' ');
 
@@ -250,7 +219,7 @@
     function tryCompute() { try { compute(); } catch (e) { console.error(e); uwagi.textContent = 'Błąd: ' + (e && e.message ? e.message : e); wynik.innerText = ''; } }
 
     // Zdarzenia
-    for (const id of ids) el[id].addEventListener('input', function(){ if (isAdjusting) return; lastEdited = id; tryCompute(); });
+    for (const id of ids) el[id].addEventListener('input', function(){ if (isAdjusting) return; tryCompute(); });
 
     // Nawigacja Enter/Shift+Enter między polami w kolejności widocznej w DOM
     const inputsOrdered = Array.from(document.querySelectorAll('input'));
@@ -298,12 +267,10 @@
       });
 
       test('Clamp subtypes & dominant format', () => {
-        clearAll(); setValues({ zrazikowy: '20', zlozony: '15', sitowaty: '10' });
-        lastEdited = 'sitowaty'; tryCompute();
+        clearAll(); setValues({ zrazikowy: '20', zlozony: '25' });
         const dom = getLines().find(l => l.indexOf('- zrazikowy:') === 0) || '';
         assert(dom.indexOf('- zrazikowy: 20') > -1, 'Dominant zrazikowy: 20%');
-        assert(dom.indexOf(', w tym ') > -1 && dom.indexOf(', w tym:') === -1, 'Comma and no colon before "w tym"');
-        assert(dom.indexOf('złożony ("complex glandular pattern"): 15%') > -1 && dom.indexOf('sitowaty: 5%') > -1, 'Subtypes 15% and 5%');
+        assert(dom === '- zrazikowy: 20% (w tym sitowaty i/lub "complex glandular pattern": 20%).', 'Clamped subtype in parentheses and final period');
       });
 
       test('Decimal comma', () => {
@@ -331,6 +298,26 @@
         assert(first === 'Stopień histologicznego zróżnicowania: G2', 'Expect G2');
       });
 
+      test('Combined subtype counted once at grade boundary', () => {
+        clearAll(); setValues({ zrazikowy: '80', tapetujacy: '20', zlozony: '19,5' });
+        assert(getLines()[0].endsWith('G2'), 'Combined subtype below 20% gives G2');
+        assert(suma.textContent.endsWith('100%'), 'Subtype is excluded from main total');
+        setValues({ zlozony: '20' });
+        assert(getLines()[0].endsWith('G3'), 'Combined subtype at 20% gives G3');
+      });
+
+      test('Combined subtype in remaining patterns and parent reduction', () => {
+        clearAll(); setValues({ tapetujacy: '70', zrazikowy: '30', zlozony: '15' });
+        const lines = getLines();
+        assert(lines.includes('- tapetujący: 70%.'), 'Dominant pattern ends with period');
+        assert(lines.includes('- zrazikowy: 30% (w tym sitowaty i/lub "complex glandular pattern": 15%).'), 'Remaining subtype in parentheses and final period');
+        setValues({ zrazikowy: '10' });
+        assert(el.zlozony.value === '10', 'Subtype follows reduced parent limit');
+        clearAll(); setValues({ zlozony: '10' });
+        assert(uwagi.textContent.includes('brak wartości'), 'Missing parent warning');
+        clearAll();
+        assert(wynik.innerText === '' && el.zlozony.value === '', 'Reset clears combined field and output');
+      });
       // Restore
       for (const id of ids) el[id].value = original[id]; tryCompute();
       const summary = 'Tests passed: ' + passed + ', failed: ' + failed; console.log(summary); results.forEach(r => console.log(r));

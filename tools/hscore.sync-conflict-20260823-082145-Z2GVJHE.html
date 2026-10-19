@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kalkulator H‑score (IHC)</title>
+  <style>
+    :root { --bg:#f8fafc; --card:#ffffff; --ink:#1f2937; --muted:#6b7280; --accent:#2563eb; --warn:#f59e0b; --err:#ef4444; }
+    html,body{height:100%}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Inter,Arial,sans-serif;background:linear-gradient(180deg,#f8fafc,#eef2f7);color:var(--ink);display:flex;align-items:center;justify-content:center;padding:24px}
+    .wrap{width:min(920px,100%)}
+    .card{background:var(--card);border:1px solid #e5e7eb;box-shadow:0 6px 28px rgba(0,0,0,.06);border-radius:18px;overflow:hidden}
+    header{padding:18px 22px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:14px}
+    header h1{font-size:1.15rem;margin:0;font-weight:700;letter-spacing:.2px}
+    header .sub{font-size:.9rem;color:var(--muted)}
+    .content{padding:22px}
+    .grid{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center}
+    .grid .head{color:var(--muted);font-size:.9rem}
+    label{font-weight:600}
+    .row{padding:10px 12px;border-radius:12px;background:#f9fafb;border:1px solid #e5e7eb;box-shadow:inset 0 1px 0 rgba(0,0,0,.02)}
+    input[type="number"]{width:110px;padding:10px 12px;border-radius:10px;border:1px solid #d1d5db;background:#ffffff;color:var(--ink);font-size:1rem}
+    input[type="number"]:focus{outline:2px solid var(--accent);border-color:#93c5fd;box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+    .pct{display:flex;align-items:center;gap:6px;color:var(--muted)}
+    .hint{color:var(--muted);font-size:.9rem;margin-top:8px}
+    .tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+    .switch{display:flex;align-items:center;gap:8px}
+    .switch input{accent-color:var(--accent);width:18px;height:18px}
+    .pill{display:inline-flex;gap:8px;align-items:center;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;padding:8px 12px;font-weight:600}
+    .pill.warn{border-color:#f59e0b66;color:#92400e}
+    .pill.err{border-color:#ef444466;color:#991b1b}
+    .result{margin-top:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .score{font-size:1.9rem;font-weight:800;letter-spacing:.5px}
+    .bar{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden;flex:1;min-width:200px}
+    .bar>span{display:block;height:100%;background:linear-gradient(90deg,#7aa2ff,#7affd1);width:0%}
+    .btn{cursor:pointer;border:none;border-radius:12px;padding:10px 14px;font-weight:700;background:#ffffff;color:var(--ink);border:1px solid #d1d5db}
+    .btn:hover{background:#f3f4f6}
+    .formula{margin-top:18px;padding:12px 14px;border-radius:12px;background:#f9fafb;border:1px solid #e5e7eb;font-size:.98rem}
+    .footer{padding:14px 22px;border-top:1px solid #e5e7eb;color:var(--muted);font-size:.9rem}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+    /* generator wyniku */
+    input[type="text"]{width:360px;max-width:100%;padding:10px 12px;border-radius:10px;border:1px solid #d1d5db;background:#ffffff;color:var(--ink);font-size:1rem}
+    .gen .preview{white-space:pre-wrap;margin-top:10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:12px}
+    details{margin-top:14px}
+    details pre{background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:12px;white-space:pre-wrap}
+    .pass{color:#16a34a}
+    .fail{color:#b91c1c}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <header>
+        <h1>Kalkulator H‑score (IHC)</h1>
+        <span class="sub">sumuje intensywność × odsetek komórek</span>
+      </header>
+      <div class="content">
+        <div class="grid head" style="margin-bottom:6px">
+          <div>Przedziały intensywności</div>
+          <div class="pct">Odsetek komórek</div>
+          <div class="pct">× Waga</div>
+        </div>
+        <div class="grid row">
+          <label for="p3">3+ (silne)</label>
+          <input id="p3" type="number" inputmode="decimal" min="0" max="100" step="1" value="0" aria-label="Odsetek komórek 3+" />
+          <div class="pct"><span>×</span><strong>3</strong></div>
+        </div>
+        <div class="grid row">
+          <label for="p2">2+ (umiarkowane)</label>
+          <input id="p2" type="number" inputmode="decimal" min="0" max="100" step="1" value="0" aria-label="Odsetek komórek 2+" />
+          <div class="pct"><span>×</span><strong>2</strong></div>
+        </div>
+        <div class="grid row">
+          <label for="p1">1+ (słabe)</label>
+          <input id="p1" type="number" inputmode="decimal" min="0" max="100" step="1" value="0" aria-label="Odsetek komórek 1+" />
+          <div class="pct"><span>×</span><strong>1</strong></div>
+        </div>
+        <div class="grid row">
+          <label for="p0">0 (brak barwienia)</label>
+          <input id="p0" type="number" inputmode="decimal" min="0" max="100" step="1" value="0" aria-label="Odsetek komórek 0+" />
+          <div class="pct"><span>×</span><strong>0</strong></div>
+        </div>
+
+        <div class="tools">
+          <label class="switch"><input type="checkbox" id="autofill" checked /> Auto‑uzupełnij <span class="mono">0+</span> do 100%</label>
+          <button class="btn" id="reset">Wyczyść</button>
+          <button class="btn" id="copy">Kopiuj wynik</button>
+          <span class="pill" id="sumInfo">Suma: <strong class="mono" id="sumPct">0.0</strong>%</span>
+          <span class="pill warn" id="warnOver" style="display:none">Suma > 100%</span>
+        </div>
+
+        <div class="result">
+          <div class="score">H‑score: <span class="mono" id="score">0</span> / 300</div>
+          <div class="bar" aria-hidden="true"><span id="bar"></span></div>
+        </div>
+
+        <div class="formula">
+          Wzór: <span class="mono">H = Σ (i × P<sub>i</sub>)</span>, gdzie <span class="mono">i ∈ {0,1,2,3}</span>, a <span class="mono">P<sub>i</sub></span> to % komórek dla danej intensywności.
+          W praktyce: <span class="mono">H = 1×%1+ + 2×%2+ + 3×%3+</span> (zakres 0–300).
+        </div>
+        <div class="hint">Podaj odsetki tak, aby łącznie <span class="mono">0+ + 1+ + 2+ + 3+ = 100%</span>. Pole 0+ nie wpływa na wynik (waga 0), ale umożliwia kontrolę sumy.</div>
+
+        <div class="gen">
+          <h2 style="margin:18px 0 8px 0;font-size:1.05rem">Generator wyniku</h2>
+          <div class="row" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <button class="btn" id="copyReport">Kopiuj raport</button>
+          </div>
+          <pre class="preview mono" id="reportPreview">Status ekspresji receptora: ujemny. Ekspresja w &lt;1% komórek.</pre>
+        </div>
+
+        <details>
+          <summary>Testy wbudowane (kliknij, aby rozwinąć)</summary>
+          <div class="tools" style="margin:8px 0 6px 0">
+            <button class="btn" id="runTests">Uruchom testy</button>
+            <span class="pill" id="testsSummary">Nie uruchomiono</span>
+          </div>
+          <pre id="testsOut" class="mono"></pre>
+        </details>
+      </div>
+      <div class="footer">Wskazówka: możesz używać liczb z przecinkiem lub kropką. Wynik aktualizuje się na żywo.</div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Utils =====
+    const el = (id) => document.getElementById(id);
+    const p0 = el('p0'), p1 = el('p1'), p2 = el('p2'), p3 = el('p3');
+    const autofill = el('autofill');
+    const sumPct = el('sumPct');
+    const warnOver = el('warnOver');
+    const scoreEl = el('score');
+    const bar = el('bar');
+    const reportPreview = el('reportPreview');
+
+    // Normalize decimal comma to dot for parsing
+    const parseNum = (v) => {
+      if (typeof v === 'string') v = v.replace(',', '.');
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    function clamp01(v){
+      if (!Number.isFinite(v)) return 0;
+      return Math.min(100, Math.max(0, v));
+    }
+
+    function fmt1(n){
+      const s = (Math.round(n * 10) / 10).toFixed(1);
+      return /\.0$/.test(s) ? s.slice(0, -2) : s;
+    }
+
+    // Pure helpers for testing & logic reuse
+    function calculateScore(v1, v2, v3){
+      return (1*clamp01(v1)) + (2*clamp01(v2)) + (3*clamp01(v3));
+    }
+
+    function getIntensityList(v1,v2,v3){
+      v1 = clamp01(v1); v2 = clamp01(v2); v3 = clamp01(v3);
+      const labels = [];
+      if (v3 > 0) labels.push('silna');
+      if (v2 > 0) labels.push('umiarkowanie nasilona');
+      if (v1 > 0) labels.push('słaba');
+      return labels.length ? labels.join(', ') : 'brak reakcji';
+    }
+
+    // Status ekspresji na podstawie odsetka komórek dodatnich (≥1%)
+    function getExpressionStatus(v1, v2, v3){
+      v1 = clamp01(v1); v2 = clamp01(v2); v3 = clamp01(v3);
+      const raw = v1 + v2 + v3;               // może być ułamkowe (np. 0.4)
+      const pct = Math.round(raw);            // zgodne z innymi miejscami
+      const label = raw >= 1 ? 'dodatni' : 'ujemny';
+      const percentText = (raw < 1) ? '<1%' : `${pct}%`;
+      return { label, percent: pct, percentText, raw };
+    }
+
+    // Tekst do schowka dla przycisku "Kopiuj wynik"
+    function buildCopySummary(){
+      return `H-score: ${scoreEl.textContent} / 300 (0+: ${p0.value}%, 1+: ${p1.value}%, 2+: ${p2.value}%, 3+: ${p3.value}%)`;
+    }
+
+    // Uniwersalne kopiowanie z bezpiecznym fallbackiem
+    async function copyToClipboard(text){
+      try{
+        if (navigator.clipboard && window.isSecureContext){
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      }catch(e){ }
+      try{
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly','');
+        ta.style.position = 'fixed';
+        ta.style.top = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ta.setSelectionRange(0, ta.value.length);
+        const ok = document.execCommand && document.execCommand('copy');
+        document.body.removeChild(ta);
+        return !!ok;
+      }catch(e){
+        return false;
+      }
+    }
+
+    // ===== Nawigacja Enterem =====
+    function getNavOrder(){ return ['p3','p2','p1','p0','copyReport']; }
+    function nextFieldId(currentId){
+      const order = getNavOrder();
+      const i = order.indexOf(currentId);
+      return i >= 0 && i < order.length - 1 ? order[i+1] : order[order.length-1];
+    }
+    function onEnterNav(e){
+      if (e.key === 'Enter' || e.key === 'NumpadEnter'){
+        e.preventDefault();
+        const id = nextFieldId(e.target.id);
+        const target = el(id);
+        if (target){ target.focus(); if (target.select) target.select(); }
+      }
+    }
+
+    // ===== App update =====
+    function update(){
+      let v1 = clamp01(parseNum(p1.value));
+      let v2 = clamp01(parseNum(p2.value));
+      let v3 = clamp01(parseNum(p3.value));
+      let v0 = clamp01(parseNum(p0.value));
+
+      if (autofill.checked){
+        const rem = 100 - (v1 + v2 + v3);
+        p0.value = fmt1(Math.max(0, rem));
+        v0 = clamp01(parseNum(p0.value));
+      }
+
+      const sum = v0 + v1 + v2 + v3;
+      sumPct.textContent = fmt1(sum);
+      warnOver.style.display = sum > 100.0001 ? 'inline-flex' : 'none';
+
+      const score = calculateScore(v1, v2, v3);
+      scoreEl.textContent = (Math.round(score)).toString();
+      bar.style.width = Math.max(0, Math.min(100, (score / 300) * 100)) + '%';
+      updateReport();
+    }
+
+    function reset(){
+      [p0, p1, p2, p3].forEach(inp => inp.value = '0');
+      autofill.checked = true;
+      update();
+      p3.focus(); p3.select();
+    }
+
+    async function copy(){
+      const s = buildCopySummary();
+      const ok = await copyToClipboard(s);
+      const btn = document.getElementById('copy');
+      const old = btn.textContent; btn.textContent = ok ? 'Skopiowano!' : 'Błąd kopiowania';
+      setTimeout(()=>btn.textContent = old, 1200);
+    }
+
+    function buildReport(){
+      const v1 = clamp01(parseNum(p1.value));
+      const v2 = clamp01(parseNum(p2.value));
+      const v3 = clamp01(parseNum(p3.value));
+      const expr = getExpressionStatus(v1,v2,v3);
+      const lineA = `Status ekspresji receptora [estrogenowego (ER)][progesteronowego (PR)]: ${expr.label}. Ekspresja w ${expr.percentText} komórek.`;
+      if (expr.raw < 1) return lineA;
+      const label = getIntensityList(v1,v2,v3);
+      const scoreTxt = scoreEl.textContent;
+      const lineB = `Intensywność reakcji: ${label}. H-score: ${scoreTxt}`;
+      return lineA + '\n' + lineB;
+    }
+
+    function updateReport(){
+      if (reportPreview) reportPreview.textContent = buildReport();
+    }
+
+    async function copyReport(){
+      const s = buildReport();
+      const ok = await copyToClipboard(s);
+      const btn = document.getElementById('copyReport');
+      if (!btn) return; const old = btn.textContent; btn.textContent = ok ? 'Skopiowano!' : 'Błąd kopiowania';
+      setTimeout(()=>btn.textContent = old, 1200);
+    }
+
+    // ===== Tests =====
+    async function runTests(){
+      const out = [];
+      function t(name, got, expect, cmp=(a,b)=>a===b){
+        const pass = cmp(got, expect);
+        out.push(`${pass ? 'PASS' : 'FAIL'}  ${name}\n  got: ${got}\n  exp: ${expect}`);
+        return pass;
+      }
+
+      // H-score calculations
+      t('Score 0,0,0 = 0', calculateScore(0,0,0), 0);
+      t('Score 30,20,10 = 100', calculateScore(30,20,10), 100);
+      t('Score 10,40,20 = 150', calculateScore(10,40,20), 150);
+      t('Score 5,15,60 = 215', calculateScore(5,15,60), 215);
+
+      // Intensity labels (lista obecnych kategorii)
+      t('Label 0,0,0 → brak reakcji', getIntensityList(0,0,0), 'brak reakcji');
+      t('Label 30,20,10 → silna, umiarkowanie nasilona, słaba', getIntensityList(30,20,10), 'silna, umiarkowanie nasilona, słaba');
+      t('Label 10,40,20 → silna, umiarkowanie nasilona, słaba', getIntensityList(10,40,20), 'silna, umiarkowanie nasilona, słaba');
+      t('Label 5,15,60 → silna, umiarkowanie nasilona, słaba', getIntensityList(5,15,60), 'silna, umiarkowanie nasilona, słaba');
+      t('Label 0,20,0 → umiarkowanie nasilona', getIntensityList(0,20,0), 'umiarkowanie nasilona');
+      t('Label 0,0,5 → silna', getIntensityList(0,0,5), 'silna');
+      t('Label 5,10,5 → silna, umiarkowanie nasilona, słaba', getIntensityList(5,10,5), 'silna, umiarkowanie nasilona, słaba');
+      t('Label 5,0,0 → słaba', getIntensityList(5,0,0), 'słaba');
+
+      // Expression status tests
+      (function(){
+        let s = getExpressionStatus(0,0,0);
+        t('Expression 0,0,0 → ujemny', s.label, 'ujemny');
+        t('Expression 0,0,0 → percentText <1%', s.percentText, '<1%');
+        s = getExpressionStatus(1,0,0);
+        t('Expression 1,0,0 → dodatni', s.label, 'dodatni');
+        t('Expression 1,0,0 → 1%', s.percent, 1);
+        s = getExpressionStatus(0.4,0,0);
+        t('Expression 0.4,0,0 → percentText <1%', s.percentText, '<1%');
+        s = getExpressionStatus(5,10,5);
+        t('Expression 5,10,5 → 20%', s.percent, 20);
+      })();
+
+      // parseNum with comma
+      t('parseNum("12,5") → 12.5', parseNum('12,5'), 12.5);
+
+      // buildCopySummary content (z auto-uzupełnieniem 0+)
+      (function(){
+        const backup = {v0:p0.value, v1:p1.value, v2:p2.value, v3:p3.value, auto:autofill.checked};
+        p1.value = '10'; p2.value = '20'; p3.value = '30'; autofill.checked = true; update();
+        const summary = buildCopySummary();
+        t('buildCopySummary → poprawny tekst', summary, 'H-score: 140 / 300 (0+: 40%, 1+: 10%, 2+: 20%, 3+: 30%)');
+        p0.value = backup.v0; p1.value = backup.v1; p2.value = backup.v2; p3.value = backup.v3; autofill.checked = backup.auto; update();
+      })();
+
+      // H-score text should be integer
+      (function(){
+        const backup = {v1:p1.value, v2:p2.value, v3:p3.value};
+        p1.value='10'; p2.value='20'; p3.value='30'; update();
+        t('H-score text is integer', scoreEl.textContent, '140');
+        p1.value=backup.v1; p2.value=backup.v2; p3.value=backup.v3; update();
+      })();
+
+      // Report contains newline for ≥1%
+      const reportSample = (function(){
+        const backup = {v1:p1.value, v2:p2.value, v3:p3.value};
+        p1.value = '10'; p2.value = '20'; p3.value = '30';
+        const s = buildReport();
+        p1.value = backup.v1; p2.value = backup.v2; p3.value = backup.v3;
+        return s;
+      })();
+      t('Report contains newline (≥1%)', /\n/.test(reportSample), true);
+
+      // Report first line format ≥1%
+      (function(){
+        const backup = {v1:p1.value, v2:p2.value, v3:p3.value};
+        p1.value='5'; p2.value='10'; p3.value='5'; update();
+        const s = buildReport().split('\n')[0];
+        t('Report line A format', s, 'Status ekspresji receptora: dodatni. Ekspresja w 20% komórek.');
+        p1.value=backup.v1; p2.value=backup.v2; p3.value=backup.v3; update();
+      })();
+
+      // Report single line for <1%
+      (function(){
+        const backup = {v1:p1.value, v2:p2.value, v3:p3.value};
+        p1.value='0.4'; p2.value='0'; p3.value='0'; update();
+        const s = buildReport();
+        t('Report <1% single line', s, 'Status ekspresji receptora: ujemny. Ekspresja w <1% komórek.');
+        p1.value=backup.v1; p2.value=backup.v2; p3.value=backup.v3; update();
+      })();
+
+      // Navigation mapping tests
+      t('nextFieldId p3 → p2', nextFieldId('p3'), 'p2');
+      t('nextFieldId p2 → p1', nextFieldId('p2'), 'p1');
+      t('nextFieldId p1 → p0', nextFieldId('p1'), 'p0');
+      t('nextFieldId p0 → copyReport', nextFieldId('p0'), 'copyReport');
+
+      const failures = out.filter(l=>l.startsWith('FAIL')).length;
+      el('testsOut').textContent = out.join('\n');
+      el('testsSummary').textContent = failures === 0 ? 'Wszystkie testy: PASS' : `Niepowodzenia: ${failures}`;
+    }
+
+    // ===== Events =====
+    [p0,p1,p2,p3].forEach(x=> x.addEventListener('input', update));
+    [p0,p1,p2,p3].forEach(x=> x.addEventListener('keydown', onEnterNav));
+    document.getElementById('reset').addEventListener('click', reset);
+    document.getElementById('copy').addEventListener('click', copy);
+    document.getElementById('copyReport').addEventListener('click', copyReport);
+    document.getElementById('runTests').addEventListener('click', runTests);
+
+    // init
+    update();
+    runTests();
+    // focus pierwsze pole (3+)
+    requestAnimationFrame(()=>{ if (p3){ p3.focus(); p3.select(); } });
+  </script>
+</body>
+</html>
